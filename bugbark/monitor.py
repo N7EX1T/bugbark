@@ -183,7 +183,8 @@ class Monitor:
                 lines += ["• " + i["name"] for i in (new_inc or res["incidents"])[:4]]
                 if res["components"]:
                     lines.append("Affected: " + ", ".join(res["components"][:6]))
-                url = (new_inc or res["incidents"] or [{}])[0].get("url") or base
+                url = (new_inc or res["incidents"] or [{}])[0].get("url") or ""
+                url = url if url.startswith(("https://", "http://")) else base
                 self.notifier.send(f"🟠 {name}: {detail.lower()}", "\n".join(lines),
                                    priority=4 if ind in ("major", "critical") else 3, click=url)
             elif up == 1 and was_up == 0:

@@ -122,6 +122,8 @@ nav svg { display: block; margin: 0 auto 2px; width: 24px; height: 24px; }
 </nav>
 <script>
 const $ = s => document.querySelector(s);
+// Links come from external feeds (NVD, status pages): only allow plain web links
+const safeUrl = u => /^https?:\/\//i.test(u || "") ? u : "";
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const api = (p, o) => fetch(p, { cache: "no-cache", ...o }).then(r => r.ok ? r.json()
   : r.json().catch(() => ({})).then(j => Promise.reject(new Error(j.error || "not found"))));
@@ -236,7 +238,7 @@ async function showDetail(id) {
   const k = c.kev_info, ex = c.explain;
   const fixRefs = c.refs.filter(r => r.tags.some(t => ["Patch", "Vendor Advisory", "Release Notes", "Mitigation"].includes(t)));
   const otherRefs = c.refs.filter(r => !fixRefs.includes(r));
-  const link = r => `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.url.replace(/^https?:\/\//, ""))}
+  const link = r => !safeUrl(r.url) ? "" : `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.url.replace(/^https?:\/\//, ""))}
     ${r.tags.length ? `<br><small>${r.tags.join(", ")}</small>` : ""}</a>`;
 
   $("#app").innerHTML = `
@@ -308,7 +310,7 @@ async function showStatus() {
     return `<div class="mrow"><span class="mdot ${cls}"></span>
       <div style="min-width:0"><div class="mname">${esc(i.name)}</div>
         <div class="mdet ${i.up === 0 ? "bad" : ""}">${esc(i.kind === "status" ? i.detail : (i.up === 0 ? i.detail : i.target))}</div>
-        ${i.incidents.map(n => `<div class="inc">• ${n.url ? `<a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.name)}</a>` : esc(n.name)}</div>`).join("")}
+        ${i.incidents.map(n => `<div class="inc">• ${safeUrl(n.url) ? `<a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.name)}</a>` : esc(n.name)}</div>`).join("")}
         ${i.components.length ? `<div class="mdet">Affected: ${esc(i.components.slice(0, 5).join(", "))}</div>` : ""}
       </div><div class="mright">${right}</div></div>`;
   };

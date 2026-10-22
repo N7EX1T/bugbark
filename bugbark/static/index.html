@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BugBark</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<!--STATIC-->
+<meta name="theme-color" content="#0b0f17">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+:root {
+  --bg: #f4f5f8; --card: #ffffff; --text: #111827; --muted: #6b7280; --line: #e5e7eb;
+  --chip: #eef0f4; --accent: #2563eb;
+  --kev: #b91c1c; --kev-bg: #fee2e2; --crit: #dc2626; --high: #ea580c; --high-bg: #ffedd5;
+  --med: #ca8a04; --ok: #16a34a; --ok-bg: #dcfce7; --down: #dc2626; --down-bg: #fee2e2; --unk: #9ca3af;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b0f17; --card: #141a24; --text: #e5e7eb; --muted: #8b95a5; --line: #232b38;
+    --chip: #1d2430; --accent: #60a5fa;
+    --kev: #fca5a5; --kev-bg: #3b1214; --crit: #f87171; --high: #fb923c; --high-bg: #3a2010;
+    --med: #facc15; --ok: #4ade80; --ok-bg: #0f2e1a; --down: #f87171; --down-bg: #3b1214; --unk: #6b7280;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-text-size-adjust: 100%; }
+a { color: inherit; text-decoration: none; }
+header { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 14px 16px 8px;
+  padding-top: calc(14px + env(safe-area-inset-top)); }
+header h1 { margin: 0; font-size: 22px; letter-spacing: -.02em; display: flex; align-items: center; gap: 8px; }
+header h1 img { width: 26px; height: 26px; }
+.back { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-weight: 600; font-size: 16px; }
+main { padding: 0 16px calc(90px + env(safe-area-inset-bottom)); max-width: 720px; margin: 0 auto; }
+.chips { display: flex; gap: 8px; margin: 8px 0 10px; overflow-x: auto; scrollbar-width: none; }
+.chip { flex: none; padding: 7px 13px; border-radius: 999px; background: var(--chip); color: var(--text);
+  font-weight: 600; font-size: 14px; border: 0; cursor: pointer; }
+.chip.on { background: var(--text); color: var(--bg); }
+.search { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); font-size: 15px; outline: none; }
+.list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.card { display: block; background: var(--card); border-radius: 14px; padding: 12px 14px 12px 16px;
+  position: relative; overflow: hidden; border: 1px solid var(--line); }
+.card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--unk); }
+.card.l-kev::before { background: var(--kev); } .card.l-critical::before { background: var(--crit); }
+.card.l-high::before { background: var(--high); }
+.card.dim { opacity: .55; }
+.r1 { display: flex; align-items: center; gap: 8px; }
+.cid { font-weight: 700; font-variant-numeric: tabular-nums; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+.score { margin-left: auto; font-weight: 800; font-size: 14px; padding: 2px 8px; border-radius: 8px;
+  font-variant-numeric: tabular-nums; background: var(--chip); }
+.s-CRITICAL { background: var(--kev-bg); color: var(--crit); } .s-HIGH { background: var(--high-bg); color: var(--high); }
+.s-MEDIUM { color: var(--med); }
+.prod { font-weight: 600; margin-top: 2px; }
+.short { color: var(--muted); font-size: 14px; margin-top: 2px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+.tag { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: var(--chip); }
+.tag.kev { background: var(--kev-bg); color: var(--kev); }
+.tag.epss { background: var(--high-bg); color: var(--high); }
+.when { margin-left: auto; color: var(--muted); font-size: 12px; }
+.empty { text-align: center; color: var(--muted); padding: 40px 10px; }
+.foot { color: var(--muted); font-size: 12px; margin: 18px 0 0; text-align: center; }
+.warn { background: var(--high-bg); color: var(--high); padding: 10px 12px; border-radius: 12px; font-size: 14px; margin: 6px 0; }
+.err { color: var(--crit); }
+
+/* details */
+.dh .cid { font-size: 24px; letter-spacing: -.01em; }
+.dh .prod { font-size: 17px; margin-top: 2px; }
+.big { display: flex; gap: 10px; margin: 14px 0 6px; }
+.stat { flex: 1; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+.stat b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+.stat span { color: var(--muted); font-size: 12px; }
+.stat.kev { background: var(--kev-bg); border-color: transparent; color: var(--kev); }
+.stat.kev span { color: var(--kev); opacity: .8; }
+section.box { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-top: 10px; }
+section.box h3 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+section.box ul { margin: 0; padding-left: 18px; } section.box li { margin: 3px 0; }
+.reason { font-weight: 600; }
+.desc { white-space: pre-wrap; font-size: 14px; }
+.links a { display: block; color: var(--accent); padding: 5px 0; word-break: break-all; font-size: 14px; }
+.links small { color: var(--muted); }
+.act { display: flex; gap: 8px; margin-top: 14px; }
+.btn { flex: 1; padding: 12px; border-radius: 12px; border: 0; font-weight: 700; font-size: 15px;
+  background: var(--chip); color: var(--text); cursor: pointer; text-align: center; }
+.btn.pri { background: var(--accent); color: #fff; }
+.btn.on { outline: 2px solid var(--accent); }
+
+/* services */
+.banner { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 14px; margin: 6px 0 14px; font-weight: 700; }
+.banner.ok { background: var(--ok-bg); color: var(--ok); } .banner.bad { background: var(--down-bg); color: var(--down); }
+.banner .big-dot { width: 14px; height: 14px; border-radius: 50%; background: currentColor; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 18px 0 8px; }
+.mon { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.mrow { display: flex; gap: 12px; padding: 11px 14px; align-items: flex-start; border-top: 1px solid var(--line); }
+.mrow:first-child { border-top: 0; }
+.mdot { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; flex: none; background: var(--unk); }
+.mdot.up { background: var(--ok); } .mdot.down { background: var(--down); box-shadow: 0 0 0 4px var(--down-bg); }
+.mname { font-weight: 600; } .mdet { color: var(--muted); font-size: 13px; }
+.mdet.bad { color: var(--down); }
+.mright { margin-left: auto; text-align: right; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.inc { font-size: 13px; margin-top: 4px; } .inc a { color: var(--accent); }
+
+nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--card); border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom); z-index: 6; }
+nav a { flex: 1; text-align: center; padding: 9px 0 10px; font-size: 12px; font-weight: 600; color: var(--muted); position: relative; }
+nav a.on { color: var(--accent); }
+nav svg { display: block; margin: 0 auto 2px; width: 24px; height: 24px; }
+.badge { position: absolute; top: 4px; left: calc(50% + 6px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: var(--crit); color: #fff; font-size: 11px; line-height: 18px; }
+</style>
+</head>
+<body>
+<header id="hdr"></header>
+<main id="app"></main>
+<nav>
+  <a href="#/" id="nav-cves"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="M12 8v5M12 16.5v.01"/></svg>Vulnerabilities<span class="badge" id="b-cves" hidden></span></a>
+  <a href="#/status" id="nav-status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Services<span class="badge" id="b-status" hidden></span></a>
+</nav>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const api = (p, o) => fetch(p, { cache: "no-cache", ...o }).then(r => r.ok ? r.json()
+  : r.json().catch(() => ({})).then(j => Promise.reject(new Error(j.error || "not found"))));
+
+// Static build (GitHub Pages): data comes from JSON files, and statuses like "Handled" live in this browser only
+const STATIC = !!window.CVE_STATIC;
+const local = {
+  all() { try { return JSON.parse(localStorage.getItem("bugbark-status") || "{}"); } catch { return {}; } },
+  set(id, s) { try { const m = local.all(); m[id] = s; localStorage.setItem("bugbark-status", JSON.stringify(m)); } catch {} },
+};
+const withLocal = c => { if (STATIC) c.status = local.all()[c.id] || "new"; return c; };
+const data = {
+  async cves(view, q) {
+    if (!STATIC) return api(`api/cves?view=${view}&q=${encodeURIComponent(q)}`);
+    const d = await api(`api/cves-${view}.json`);
+    d.items.forEach(withLocal);
+    const imp = view === "important" ? d.items : (await api("api/cves-important.json")).items.map(withLocal);
+    d.new = imp.filter(c => c.status === "new").length;
+    const t = q.trim().toLowerCase();
+    if (t) d.items = d.items.filter(c => [c.id, c.product, c.vendor, c.summary].some(x => (x || "").toLowerCase().includes(t)));
+    return d;
+  },
+  async cve(id) {
+    if (!STATIC) return api("api/cve/" + id);
+    const c = withLocal(await api(`api/cve/${id}.json`));
+    if (c.status === "new") { local.set(id, "seen"); c.status = "seen"; }
+    return c;
+  },
+  setStatus(id, status) {
+    if (STATIC) { local.set(id, status); return Promise.resolve(); }
+    return api(`api/cve/${id}/status`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
+  },
+  monitors: () => api(STATIC ? "api/monitors.json" : "api/monitors"),
+  health: () => api(STATIC ? "api/health.json" : "api/health"),
+};
+const state = { view: "important", q: "" };
+const SEV = { CRITICAL: "critical", HIGH: "high", MEDIUM: "medium", LOW: "low" };
+const JOB = { nvd: "NVD", kev: "CISA KEV", epss: "EPSS", sites: "sites", status: "services" };
+
+function rel(ts) {
+  if (!ts) return "";
+  const s = (Date.now() - new Date(ts)) / 1000;
+  if (s < 60) return "just now";
+  if (s < 3600) return Math.floor(s / 60) + " min ago";
+  if (s < 86400) return Math.floor(s / 3600) + "h ago";
+  if (s < 86400 * 7) return Math.floor(s / 86400) + "d ago";
+  return new Date(ts).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
+}
+function dur(ts) {
+  const s = (Date.now() - new Date(ts)) / 1000;
+  if (s < 3600) return Math.max(1, Math.floor(s / 60)) + " min";
+  if (s < 86400) return Math.floor(s / 3600) + "h";
+  return Math.floor(s / 86400) + "d";
+}
+function setBadge(id, n) { const b = $(id); b.hidden = !n; b.textContent = n > 99 ? "99+" : n; }
+function nav(tab) {
+  $("#nav-cves").classList.toggle("on", tab === "cves");
+  $("#nav-status").classList.toggle("on", tab === "status");
+}
+const logo = `<img src="icon.svg" alt="">`;
+
+/* ---------- vulnerability list ---------- */
+let qTimer;
+async function showList() {
+  nav("cves");
+  $("#hdr").innerHTML = `<h1>${logo}Vulnerabilities</h1>
+    <div class="chips">
+      ${[["important", "Major"], ["kev", "Exploited"], ["all", "All recent"]].map(([v, l]) =>
+        `<button class="chip ${state.view === v ? "on" : ""}" data-v="${v}">${l}</button>`).join("")}
+    </div>
+    <input class="search" id="q" placeholder="Search: Windows, Chrome, CVE-2026-…" value="${esc(state.q)}">`;
+  document.querySelectorAll(".chip").forEach(b => b.onclick = () => { state.view = b.dataset.v; showList(); });
+  $("#q").oninput = e => { clearTimeout(qTimer); qTimer = setTimeout(() => { state.q = e.target.value; loadList(); }, 250); };
+  await loadList();
+}
+async function loadList() {
+  const [d, h] = await Promise.all([
+    data.cves(state.view, state.q), data.health()]);
+  setBadge("#b-cves", d.new);
+  const items = d.items.map(c => `
+    <a class="card l-${c.level || "none"} ${c.status === "dismissed" || c.status === "done" ? "dim" : ""}" href="#/cve/${c.id}">
+      <div class="r1">${c.status === "new" && c.important ? '<span class="dot"></span>' : ""}
+        <span class="cid">${c.id}</span>
+        ${c.score != null ? `<span class="score s-${c.severity}">${c.score.toFixed(1)}</span>` : ""}</div>
+      <div class="prod">${esc(c.product || "Unknown product")}</div>
+      ${c.short ? `<div class="short">${esc(c.short)}</div>` : `<div class="short">${esc(c.summary.slice(0, 110))}…</div>`}
+      <div class="tags">
+        ${c.kev ? '<span class="tag kev">⚠ Exploited</span>' : ""}
+        ${c.epss != null && c.epss >= .1 ? `<span class="tag epss">EPSS ${Math.round(c.epss * 100)}%</span>` : ""}
+        ${c.status === "done" ? '<span class="tag">✓ Handled</span>' : ""}
+        <span class="when">${rel(c.kev && c.kev_added > c.published ? c.kev_added : c.published)}</span>
+      </div>
+    </a>`).join("");
+  $("#app").innerHTML =
+    (h.notify ? "" : `<div class="warn">Notifications are not set up: set the <b>NTFY_TOPIC</b> secret or environment variable</div>`) +
+    `<div class="list">${items || `<div class="empty">Nothing here yet.<br>The first check takes a few minutes.</div>`}</div>` +
+    `<p class="foot">${STATIC ? `Updated ${rel(h.generated)} · ` : ""}${Object.entries(h.jobs).filter(([k]) => ["nvd", "kev"].includes(k)).map(([k, j]) =>
+      j.error ? `<span class="err">${JOB[k]}: error</span>` : `${JOB[k]}: ${rel(j.last_ok)}`).join(" · ")}</p>`;
+}
+
+/* ---------- single vulnerability ---------- */
+async function showDetail(id) {
+  nav("cves");
+  $("#hdr").innerHTML = `<a class="back" href="#/">‹ Back</a>`;
+  $("#app").innerHTML = `<div class="empty">Loading…</div>`;
+  let c;
+  try { c = await data.cve(id); } catch (e) {
+    $("#app").innerHTML = `<div class="empty">${esc(id)} is not in the dashboard.<br><br>
+      <a class="back" href="https://nvd.nist.gov/vuln/detail/${esc(id)}" target="_blank" rel="noopener">Open in NVD →</a></div>`;
+    return;
+  }
+  const k = c.kev_info, ex = c.explain;
+  const fixRefs = c.refs.filter(r => r.tags.some(t => ["Patch", "Vendor Advisory", "Release Notes", "Mitigation"].includes(t)));
+  const otherRefs = c.refs.filter(r => !fixRefs.includes(r));
+  const link = r => `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.url.replace(/^https?:\/\//, ""))}
+    ${r.tags.length ? `<br><small>${r.tags.join(", ")}</small>` : ""}</a>`;
+
+  $("#app").innerHTML = `
+    <div class="dh">
+      <div class="cid">${c.id}</div>
+      <div class="prod">${esc(c.product || "Unknown product")}</div>
+      <div class="short">Published ${rel(c.published)}${c.kev ? ` · exploited since ${new Date(c.kev_added).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}` : ""}</div>
+    </div>
+    <div class="big">
+      <div class="stat"><b style="color:var(--${c.severity === "CRITICAL" ? "crit" : c.severity === "HIGH" ? "high" : "text"})">${c.score != null ? c.score.toFixed(1) : "—"}</b><span>CVSS · ${SEV[c.severity] || "not scored"}</span></div>
+      <div class="stat"><b>${c.epss != null ? Math.round(c.epss * 100) + "%" : "—"}</b><span>EPSS · attack chance</span></div>
+      ${c.kev ? `<div class="stat kev"><b>Yes</b><span>Exploited now</span></div>` : ""}
+    </div>
+
+    ${c.reasons.length ? `<section class="box"><h3>Why it matters</h3><ul>${c.reasons.map(r => `<li class="reason">${esc(r)}</li>`).join("")}</ul></section>` : ""}
+
+    ${ex.kind || ex.how.length || ex.impact.length ? `<section class="box"><h3>Risk</h3><ul>
+      ${ex.kind ? `<li><b>Type:</b> ${esc(ex.kind)}</li>` : ""}
+      ${ex.how.length ? `<li><b>Attack:</b> ${esc(ex.how.join(", "))}</li>` : ""}
+      ${ex.impact.length ? `<li><b>Impact:</b> ${esc(ex.impact.join("; "))}</li>` : ""}
+    </ul></section>` : ""}
+
+    <section class="box"><h3>What to do</h3><ul>
+      ${k && k.action ? `<li>${esc(k.action)}${k.due ? ` <small>(CISA deadline: ${esc(k.due)})</small>` : ""}</li>` : ""}
+      ${c.fixed.length ? `<li><b>Update to:</b> ${c.fixed.map(esc).join(", ")} or later</li>` : ""}
+      ${fixRefs.length ? `<li>See the vendor fix and instructions in the links below</li>` : ""}
+      ${!c.fixed.length && !fixRefs.length && !(k && k.action) ? `<li>No fix listed yet. Watch for vendor announcements.</li>` : ""}
+    </ul></section>
+
+    ${c.affected.length ? `<section class="box"><h3>Affected versions</h3><ul>
+      ${c.affected.slice(0, 12).map(a => `<li><b>${esc([a.vendor, a.product].filter(x => x && x.toLowerCase() !== "n/a").join(" "))}</b>: ${esc(a.versions.join(", ") || "versions not specified")}</li>`).join("")}
+      ${c.affected.length > 12 ? `<li>…and ${c.affected.length - 12} more</li>` : ""}
+    </ul></section>` : ""}
+
+    <section class="box"><h3>Description</h3>
+      ${k && k.name ? `<p class="reason" style="margin:0 0 6px">${esc(k.name)}</p>` : ""}
+      <div class="desc">${esc(c.description || "No description yet")}</div>
+    </section>
+
+    <section class="box links"><h3>Links</h3>
+      <a href="https://nvd.nist.gov/vuln/detail/${c.id}" target="_blank" rel="noopener">nvd.nist.gov: NVD entry</a>
+      ${c.kev ? `<a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=${c.id}" target="_blank" rel="noopener">cisa.gov: KEV catalog</a>` : ""}
+      ${[...fixRefs, ...otherRefs].slice(0, 12).map(link).join("")}
+    </section>
+
+    <div class="act">
+      <button class="btn ${c.status === "done" ? "on" : ""}" data-s="done">✓ Handled</button>
+      <button class="btn ${c.status === "dismissed" ? "on" : ""}" data-s="dismissed">Not relevant</button>
+    </div>`;
+  document.querySelectorAll(".act .btn").forEach(b => b.onclick = async () => {
+    const s = c.status === b.dataset.s ? "seen" : b.dataset.s;
+    await data.setStatus(c.id, s);
+    c.status = s;
+    document.querySelectorAll(".act .btn").forEach(x => x.classList.toggle("on", x.dataset.s === s));
+  });
+  window.scrollTo(0, 0);
+}
+
+/* ---------- services ---------- */
+async function showStatus() {
+  nav("status");
+  $("#hdr").innerHTML = `<h1>${logo}Services</h1>`;
+  const d = await data.monitors();
+  setBadge("#b-status", d.down);
+  const own = d.items.filter(i => i.kind !== "status"), pub = d.items.filter(i => i.kind === "status");
+  const row = i => {
+    const cls = i.up === 1 ? "up" : i.up === 0 ? "down" : "";
+    const right = i.up === 0 && i.since ? `down for<br>${dur(i.since)}` : i.latency != null ? `${i.latency} ms` : "";
+    return `<div class="mrow"><span class="mdot ${cls}"></span>
+      <div style="min-width:0"><div class="mname">${esc(i.name)}</div>
+        <div class="mdet ${i.up === 0 ? "bad" : ""}">${esc(i.kind === "status" ? i.detail : (i.up === 0 ? i.detail : i.target))}</div>
+        ${i.incidents.map(n => `<div class="inc">• ${n.url ? `<a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.name)}</a>` : esc(n.name)}</div>`).join("")}
+        ${i.components.length ? `<div class="mdet">Affected: ${esc(i.components.slice(0, 5).join(", "))}</div>` : ""}
+      </div><div class="mright">${right}</div></div>`;
+  };
+  $("#app").innerHTML = `
+    <div class="banner ${d.down ? "bad" : "ok"}"><span class="big-dot"></span>${d.down ? `Issues detected: ${d.down}` : "All systems operational"}</div>
+    <h2>My sites &amp; services</h2>
+    ${own.length ? `<div class="mon">${own.map(row).join("")}</div>` : `<div class="empty" style="padding:16px">Add your sites in config.toml → [[monitor.sites]]</div>`}
+    <h2>Popular services</h2>
+    <div class="mon">${pub.map(row).join("") || `<div class="empty">No data</div>`}</div>`;
+}
+
+function route() {
+  const h = location.hash;
+  if (h.startsWith("#/q/")) { state.view = "important"; state.q = decodeURIComponent(h.slice(4)); }
+  const p = h.startsWith("#/cve/") ? showDetail(h.slice(6)) : h === "#/status" ? showStatus() : showList();
+  p.catch(e => { $("#app").innerHTML = `<div class="empty">Cannot reach the server: ${esc(e.message)}</div>`; });
+}
+window.addEventListener("hashchange", route);
+route();
+setInterval(() => {
+  if (document.hidden) return;
+  const h = location.hash;
+  if (h === "#/status") showStatus().catch(() => {});
+  else if (!h.startsWith("#/cve/") && document.activeElement?.id !== "q") loadList().catch(() => {});
+}, 60000);
+data.monitors().then(d => setBadge("#b-status", d.down)).catch(() => {});
+</script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+# BugBark configuration.
+#
+# Never put secrets in this file: the repository is public.
+# Secrets come from environment variables (GitHub Actions secrets, or a .env file for Docker):
+#   NTFY_TOPIC, NTFY_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, NVD_API_KEY,
+#   BUGBARK_PUBLIC_URL, BUGBARK_WEB_TOKEN
+
+[notify]
+# Push notifications via ntfy (free app for Android and iOS).
+# Install the app, tap "+" and subscribe to the same topic name as below.
+# The topic works like a password: anyone who knows it can read your alerts,
+# so pick a long random name, e.g. "bugbark-7f3k9q2m", and set it as NTFY_TOPIC.
+# Optional Telegram: TELEGRAM_TOKEN (from @BotFather) and TELEGRAM_CHAT_ID.
+ntfy_server = "https://ntfy.sh"
+
+[web]
+host = "0.0.0.0"
+port = 8080
+# Address of the dashboard for the "Details" button in notifications (BUGBARK_PUBLIC_URL).
+# Empty = this computer's LAN IP. On GitHub Actions it is set to your GitHub Pages URL.
+# BUGBARK_WEB_TOKEN: if set, the self-hosted dashboard only opens via http://...?token=<token>
+
+[cve]
+check_minutes = 15
+# Optional NVD_API_KEY makes NVD requests ~10x faster: https://nvd.nist.gov/developers/request-an-api-key
+# A CVE is "major" if ANY of these is true:
+#   - it is in the CISA KEV catalog (actively exploited)
+#   - its EPSS score >= epss_threshold (0.5 = 50% chance of exploitation in 30 days)
+#   - its CVSS >= min_cvss AND it affects one of the vendors below
+min_cvss = 9.0
+epss_threshold = 0.5
+# Also alert on ANY vendor at or above this CVSS (e.g. 10.0). 0 = off.
+any_vendor_min_cvss = 0
+# Max individual notifications per check; the rest are sent as one summary
+max_per_run = 8
+initial_days = 1
+keep_days = 60
+
+# Software you run yourself: alerts start at a lower score (watch_min_cvss)
+watch = []                 # e.g. ["nginx", "Nextcloud", "Home Assistant"]
+watch_min_cvss = 7.0
+
+# Major vendors and products. Remove a line to stop alerts for it.
+vendors = [
+    "Microsoft", "Windows", "Exchange Server", "SharePoint", "Outlook",
+    "Apple", "iOS", "macOS", "Safari",
+    "Google", "Chrome", "Chromium", "Android",
+    "Linux kernel", "Red Hat", "Ubuntu", "Debian",
+    "Cisco", "Fortinet", "FortiOS", "FortiGate", "Ivanti", "Palo Alto Networks", "PAN-OS",
+    "VMware", "Broadcom", "Citrix", "NetScaler", "Juniper", "F5", "BIG-IP", "SonicWall",
+    "Check Point", "Zyxel", "MikroTik",
+    "Oracle", "SAP", "IBM", "Adobe", "Mozilla", "Firefox", "Thunderbird",
+    "Atlassian", "Confluence", "Jira",
+    "Apache", "Tomcat", "nginx", "OpenSSL", "OpenSSH", "sudo", "glibc", "Samba", "Exim",
+    "Kubernetes", "Docker", "GitLab", "Jenkins",
+    "Veeam", "Progress Software", "MOVEit", "Zimbra", "Roundcube",
+    "WinRAR", "7-Zip", "Telegram", "WhatsApp", "Zoom", "Node.js", "OpenVPN",
+    "Synology", "QNAP", "Samsung", "Qualcomm", "Intel", "AMD", "NVIDIA",
+]
+
+[monitor]
+interval_seconds = 60
+fail_threshold = 2         # consecutive failures before a "down" alert
+timeout_seconds = 10
+
+# Your websites. Optional per site: expect_status = 200, contains = "some text", method = "HEAD"
+# [[monitor.sites]]
+# name = "My website"
+# url = "https://example.com"
+
+# Your programs/servers checked by TCP port (game server, SSH, database, ...)
+# On GitHub Actions only public addresses work, not your home network.
+# [[monitor.ports]]
+# name = "Home server SSH"
+# host = "192.168.1.10"
+# port = 22
+
+[status_pages]
+interval_seconds = 300
+
+# Public status pages (Atlassian Statuspage format: <url>/api/v2/summary.json)
+[status_pages.pages]
+GitHub = "https://www.githubstatus.com"
+Cloudflare = "https://www.cloudflarestatus.com"
+Discord = "https://discordstatus.com"
+OpenAI = "https://status.openai.com"
+Claude = "https://status.claude.com"
+npm = "https://status.npmjs.org"
+Reddit = "https://www.redditstatus.com"
+Dropbox = "https://status.dropbox.com"

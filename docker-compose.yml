@@ -1,0 +1,14 @@
+services:
+  bugbark:
+    build: .
+    container_name: bugbark
+    restart: unless-stopped
+    # Host networking: the dashboard is reachable on this machine's LAN IP,
+    # and port checks can reach devices on your home network.
+    network_mode: host
+    env_file:
+      - path: .env        # NTFY_TOPIC=..., see README
+        required: false
+    volumes:
+      - ./config.toml:/app/config.toml:ro
+      - ./data:/app/data

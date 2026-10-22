@@ -8,117 +8,183 @@
 <link rel="icon" href="icon.svg">
 <link rel="apple-touch-icon" href="icon.svg">
 <!--STATIC-->
-<meta name="theme-color" content="#0b0f17">
+<meta name="theme-color" content="#07090c">
+<meta name="color-scheme" content="dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #f4f5f8; --card: #ffffff; --text: #111827; --muted: #6b7280; --line: #e5e7eb;
-  --chip: #eef0f4; --accent: #2563eb;
-  --kev: #b91c1c; --kev-bg: #fee2e2; --crit: #dc2626; --high: #ea580c; --high-bg: #ffedd5;
-  --med: #ca8a04; --ok: #16a34a; --ok-bg: #dcfce7; --down: #dc2626; --down-bg: #fee2e2; --unk: #9ca3af;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b0f17; --card: #141a24; --text: #e5e7eb; --muted: #8b95a5; --line: #232b38;
-    --chip: #1d2430; --accent: #60a5fa;
-    --kev: #fca5a5; --kev-bg: #3b1214; --crit: #f87171; --high: #fb923c; --high-bg: #3a2010;
-    --med: #facc15; --ok: #4ade80; --ok-bg: #0f2e1a; --down: #f87171; --down-bg: #3b1214; --unk: #6b7280;
-  }
+  --bg: #07090c; --panel: #0c1016; --panel2: #10161e; --line: #1b232e; --line2: #2a3442;
+  --text: #e8eef5; --muted: #7a8696; --dim: #4b5563;
+  --acid: #b6ff3b; --acid-d: rgba(182, 255, 59, .12);
+  --crit: #ff3860; --crit-d: rgba(255, 56, 96, .14);
+  --high: #ff9f1a; --high-d: rgba(255, 159, 26, .13);
+  --med: #f5d90a; --ok: #3dff9a; --ok-d: rgba(61, 255, 154, .10);
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --sans: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; background: var(--bg); color: var(--text);
-  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-text-size-adjust: 100%; }
+html { background: var(--bg); }
+body { margin: 0; color: var(--text); font: 15px/1.45 var(--sans); -webkit-text-size-adjust: 100%; }
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgba(182, 255, 59, .07), transparent 60%),
+    linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 28px 28px;
+  opacity: .55; mask-image: linear-gradient(#000, transparent 70%); -webkit-mask-image: linear-gradient(#000, transparent 70%); }
 a { color: inherit; text-decoration: none; }
-header { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 14px 16px 8px;
-  padding-top: calc(14px + env(safe-area-inset-top)); }
-header h1 { margin: 0; font-size: 22px; letter-spacing: -.02em; display: flex; align-items: center; gap: 8px; }
-header h1 img { width: 26px; height: 26px; }
-.back { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-weight: 600; font-size: 16px; }
-main { padding: 0 16px calc(90px + env(safe-area-inset-bottom)); max-width: 720px; margin: 0 auto; }
-.chips { display: flex; gap: 8px; margin: 8px 0 10px; overflow-x: auto; scrollbar-width: none; }
-.chip { flex: none; padding: 7px 13px; border-radius: 999px; background: var(--chip); color: var(--text);
-  font-weight: 600; font-size: 14px; border: 0; cursor: pointer; }
-.chip.on { background: var(--text); color: var(--bg); }
-.search { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line);
-  background: var(--card); color: var(--text); font-size: 15px; outline: none; }
-.list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-.card { display: block; background: var(--card); border-radius: 14px; padding: 12px 14px 12px 16px;
-  position: relative; overflow: hidden; border: 1px solid var(--line); }
-.card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--unk); }
-.card.l-kev::before { background: var(--kev); } .card.l-critical::before { background: var(--crit); }
-.card.l-high::before { background: var(--high); }
-.card.dim { opacity: .55; }
-.r1 { display: flex; align-items: center; gap: 8px; }
-.cid { font-weight: 700; font-variant-numeric: tabular-nums; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
-.score { margin-left: auto; font-weight: 800; font-size: 14px; padding: 2px 8px; border-radius: 8px;
-  font-variant-numeric: tabular-nums; background: var(--chip); }
-.s-CRITICAL { background: var(--kev-bg); color: var(--crit); } .s-HIGH { background: var(--high-bg); color: var(--high); }
-.s-MEDIUM { color: var(--med); }
-.prod { font-weight: 600; margin-top: 2px; }
-.short { color: var(--muted); font-size: 14px; margin-top: 2px; }
-.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
-.tag { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: var(--chip); }
-.tag.kev { background: var(--kev-bg); color: var(--kev); }
-.tag.epss { background: var(--high-bg); color: var(--high); }
-.when { margin-left: auto; color: var(--muted); font-size: 12px; }
-.empty { text-align: center; color: var(--muted); padding: 40px 10px; }
-.foot { color: var(--muted); font-size: 12px; margin: 18px 0 0; text-align: center; }
-.warn { background: var(--high-bg); color: var(--high); padding: 10px 12px; border-radius: 12px; font-size: 14px; margin: 6px 0; }
+.mono { font-family: var(--mono); }
+
+header { position: sticky; top: 0; z-index: 5; padding: 12px 16px 10px; padding-top: calc(12px + env(safe-area-inset-top));
+  background: linear-gradient(var(--bg) 75%, rgba(7, 9, 12, 0)); }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand img { width: 30px; height: 30px; }
+.brand b { font: 800 18px/1 var(--mono); letter-spacing: .06em; }
+.brand b i { font-style: normal; color: var(--acid); }
+.live { margin-left: auto; font: 600 11px/1 var(--mono); color: var(--muted); letter-spacing: .08em; display: flex; align-items: center; gap: 6px; }
+.live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--acid); box-shadow: 0 0 10px var(--acid);
+  animation: pulse 2s infinite; }
+.live.err::before { background: var(--crit); box-shadow: 0 0 10px var(--crit); }
+@keyframes pulse { 50% { opacity: .35; } }
+
+main { padding: 0 16px calc(96px + env(safe-area-inset-bottom)); max-width: 760px; margin: 0 auto; }
+
+/* stat strip */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line2); margin: 12px 0 14px; background: var(--panel); }
+.stat { padding: 10px 12px; border-left: 1px solid var(--line2); cursor: pointer; text-align: left; background: none; color: inherit; font: inherit; border-top: 0; border-right: 0; border-bottom: 0; }
+.stat:first-child { border-left: 0; }
+.stat b { display: block; font: 800 26px/1.05 var(--mono); }
+.stat span { font: 600 10px/1.2 var(--mono); letter-spacing: .1em; color: var(--muted); text-transform: uppercase; }
+.stat.on { background: var(--panel2); box-shadow: inset 0 -2px 0 var(--acid); }
+.stat.crit b { color: var(--crit); } .stat.acid b { color: var(--acid); }
+
+.search { width: 100%; padding: 11px 12px 11px 34px; border: 1px solid var(--line2); background: var(--panel) no-repeat 11px 50% / 15px
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237a8696' stroke-width='2.4'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-4-4'/%3E%3C/svg%3E");
+  color: var(--text); font: 14px var(--mono); outline: none; border-radius: 0; }
+.search:focus { border-color: var(--acid); }
+.search::placeholder { color: var(--dim); }
+.label { font: 600 11px/1 var(--mono); letter-spacing: .12em; color: var(--muted); text-transform: uppercase; margin: 18px 0 8px;
+  display: flex; align-items: center; gap: 8px; }
+.label::after { content: ""; flex: 1; height: 1px; background: var(--line2); }
+
+/* vulnerability rows */
+.list { display: flex; flex-direction: column; gap: 8px; }
+.row { display: grid; grid-template-columns: 64px 1fr; background: var(--panel); border: 1px solid var(--line); position: relative;
+  transition: border-color .15s, transform .15s; }
+.row:active { transform: scale(.99); }
+.row:hover { border-color: var(--line2); }
+.row.dim { opacity: .45; }
+.sc { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-right: 1px solid var(--line);
+  background: var(--panel2); }
+.sc b { font: 800 22px/1 var(--mono); }
+.sc span { font: 600 9px/1 var(--mono); letter-spacing: .12em; color: var(--muted); }
+.s-CRITICAL .sc { background: var(--crit-d); } .s-CRITICAL .sc b { color: var(--crit); }
+.s-HIGH .sc { background: var(--high-d); } .s-HIGH .sc b { color: var(--high); }
+.s-MEDIUM .sc b { color: var(--med); }
+.row.kev { border-color: rgba(255, 56, 96, .55); box-shadow: 0 0 0 1px rgba(255, 56, 96, .15), 0 0 24px rgba(255, 56, 96, .12); }
+.rb { padding: 10px 12px 11px; min-width: 0; }
+.meta { display: flex; align-items: center; gap: 8px; font: 600 12px/1 var(--mono); color: var(--muted); }
+.meta .when { margin-left: auto; font-weight: 400; }
+.new { width: 7px; height: 7px; background: var(--acid); box-shadow: 0 0 8px var(--acid); flex: none; }
+.prod { font: 700 16px/1.25 var(--sans); margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vec { font: 500 11px/1.35 var(--mono); color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: .03em; }
+.vec em { color: var(--text); font-style: normal; }
+.flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.flag { font: 800 10px/1 var(--mono); letter-spacing: .08em; padding: 4px 6px; border: 1px solid var(--line2); color: var(--muted); }
+.flag.kev { color: #fff; background: var(--crit); border-color: var(--crit); animation: glow 1.6s infinite; }
+.flag.epss { color: var(--high); border-color: rgba(255, 159, 26, .5); }
+.flag.done { color: var(--acid); border-color: rgba(182, 255, 59, .4); }
+@keyframes glow { 50% { box-shadow: 0 0 12px rgba(255, 56, 96, .7); } }
+.empty { text-align: center; color: var(--muted); padding: 44px 10px; font: 13px/1.6 var(--mono); }
+.foot { color: var(--dim); font: 11px/1.6 var(--mono); margin: 22px 0 0; text-align: center; letter-spacing: .04em; }
+.warn { border: 1px solid rgba(255, 159, 26, .5); background: var(--high-d); color: var(--high); padding: 10px 12px; font: 12px/1.5 var(--mono); margin-bottom: 10px; }
 .err { color: var(--crit); }
 
 /* details */
-.dh .cid { font-size: 24px; letter-spacing: -.01em; }
-.dh .prod { font-size: 17px; margin-top: 2px; }
-.big { display: flex; gap: 10px; margin: 14px 0 6px; }
-.stat { flex: 1; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
-.stat b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
-.stat span { color: var(--muted); font-size: 12px; }
-.stat.kev { background: var(--kev-bg); border-color: transparent; color: var(--kev); }
-.stat.kev span { color: var(--kev); opacity: .8; }
-section.box { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-top: 10px; }
-section.box h3 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
-section.box ul { margin: 0; padding-left: 18px; } section.box li { margin: 3px 0; }
-.reason { font-weight: 600; }
-.desc { white-space: pre-wrap; font-size: 14px; }
-.links a { display: block; color: var(--accent); padding: 5px 0; word-break: break-all; font-size: 14px; }
-.links small { color: var(--muted); }
-.act { display: flex; gap: 8px; margin-top: 14px; }
-.btn { flex: 1; padding: 12px; border-radius: 12px; border: 0; font-weight: 700; font-size: 15px;
-  background: var(--chip); color: var(--text); cursor: pointer; text-align: center; }
-.btn.pri { background: var(--accent); color: #fff; }
-.btn.on { outline: 2px solid var(--accent); }
+.back { display: inline-flex; align-items: center; gap: 6px; font: 600 12px/1 var(--mono); letter-spacing: .1em; color: var(--acid); padding: 6px 0; }
+.hero { border: 1px solid var(--line2); background: var(--panel); padding: 16px; margin-top: 6px; position: relative; overflow: hidden; }
+.hero::after { content: ""; position: absolute; right: -40px; top: -40px; width: 160px; height: 160px; border-radius: 50%;
+  background: radial-gradient(var(--glow, transparent), transparent 70%); opacity: .5; pointer-events: none; }
+.hero.s-CRITICAL { --glow: rgba(255, 56, 96, .5); } .hero.s-HIGH { --glow: rgba(255, 159, 26, .45); }
+.hid { font: 600 13px/1 var(--mono); color: var(--muted); letter-spacing: .04em; }
+.hero h1 { margin: 8px 0 0; font: 700 24px/1.15 var(--sans); letter-spacing: -.01em; }
+.score { display: flex; align-items: flex-end; gap: 14px; margin-top: 16px; }
+.score .big { font: 800 56px/.85 var(--mono); letter-spacing: -.04em; }
+.s-CRITICAL .big { color: var(--crit); } .s-HIGH .big { color: var(--high); } .s-MEDIUM .big { color: var(--med); }
+.gauge { flex: 1; padding-bottom: 2px; }
+.bars { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
+.bars i { height: 14px; background: var(--line2); }
+.s-CRITICAL .bars i.on { background: var(--crit); } .s-HIGH .bars i.on { background: var(--high); }
+.s-MEDIUM .bars i.on { background: var(--med); } .s-LOW .bars i.on, .s-none .bars i.on { background: var(--muted); }
+.gauge span { display: block; margin-top: 6px; font: 600 11px/1 var(--mono); letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
+.exploit { margin-top: 14px; padding: 10px 12px; background: var(--crit); color: #fff; font: 800 12px/1.4 var(--mono); letter-spacing: .06em;
+  display: flex; align-items: center; gap: 8px; }
+.exploit::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: pulse 1s infinite; flex: none; }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line2); border: 1px solid var(--line2); margin-top: 10px; }
+.tile { background: var(--panel); padding: 10px 11px; min-width: 0; }
+.tile b { display: block; font: 800 17px/1.1 var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile span { font: 600 9px/1.3 var(--mono); letter-spacing: .1em; color: var(--muted); text-transform: uppercase; }
+.sec { border: 1px solid var(--line); background: var(--panel); padding: 12px 14px; margin-top: 8px; }
+.sec h3 { margin: 0 0 8px; font: 600 11px/1 var(--mono); letter-spacing: .12em; color: var(--acid); text-transform: uppercase; }
+.sec h3::before { content: "// "; color: var(--dim); }
+.sec ul { margin: 0; padding: 0; list-style: none; }
+.sec li { padding: 5px 0 5px 16px; position: relative; border-top: 1px dashed var(--line); }
+.sec li:first-child { border-top: 0; }
+.sec li::before { content: "›"; position: absolute; left: 2px; color: var(--acid); font-family: var(--mono); }
+.sec li b { color: var(--text); font-weight: 700; }
+.why li { font-weight: 600; }
+.ver { font: 12.5px/1.5 var(--mono); color: var(--muted); }
+.ver b { font-family: var(--sans); font-size: 14px; color: var(--text); }
+.desc { white-space: pre-wrap; font-size: 14px; color: #c9d3de; }
+.kname { font-weight: 700; margin: 0 0 6px; }
+.links a { display: block; padding: 7px 0; border-top: 1px dashed var(--line); font: 12px/1.45 var(--mono); color: var(--acid); word-break: break-all; }
+.links a:first-of-type { border-top: 0; }
+.links small { display: block; color: var(--dim); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.act { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.btn { padding: 13px; border: 1px solid var(--line2); background: var(--panel); color: var(--text); font: 800 12px/1 var(--mono);
+  letter-spacing: .1em; text-transform: uppercase; cursor: pointer; border-radius: 0; }
+.btn.on { border-color: var(--acid); color: var(--acid); background: var(--acid-d); }
 
 /* services */
-.banner { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 14px; margin: 6px 0 14px; font-weight: 700; }
-.banner.ok { background: var(--ok-bg); color: var(--ok); } .banner.bad { background: var(--down-bg); color: var(--down); }
-.banner .big-dot { width: 14px; height: 14px; border-radius: 50%; background: currentColor; }
-h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 18px 0 8px; }
-.mon { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
-.mrow { display: flex; gap: 12px; padding: 11px 14px; align-items: flex-start; border-top: 1px solid var(--line); }
-.mrow:first-child { border-top: 0; }
-.mdot { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; flex: none; background: var(--unk); }
-.mdot.up { background: var(--ok); } .mdot.down { background: var(--down); box-shadow: 0 0 0 4px var(--down-bg); }
-.mname { font-weight: 600; } .mdet { color: var(--muted); font-size: 13px; }
-.mdet.bad { color: var(--down); }
-.mright { margin-left: auto; text-align: right; color: var(--muted); font-size: 12px; white-space: nowrap; }
-.inc { font-size: 13px; margin-top: 4px; } .inc a { color: var(--accent); }
+.sys { display: flex; align-items: center; gap: 12px; padding: 16px; border: 1px solid; margin: 12px 0 4px; }
+.sys b { font: 800 15px/1.2 var(--mono); letter-spacing: .08em; }
+.sys span { display: block; font: 11px/1.4 var(--mono); opacity: .8; margin-top: 3px; }
+.sys.ok { border-color: rgba(61, 255, 154, .4); background: var(--ok-d); color: var(--ok); }
+.sys.bad { border-color: rgba(255, 56, 96, .6); background: var(--crit-d); color: var(--crit); }
+.sys .dot { width: 12px; height: 12px; border-radius: 50%; background: currentColor; box-shadow: 0 0 14px currentColor; animation: pulse 2s infinite; flex: none; }
+.mon { border: 1px solid var(--line); background: var(--panel); }
+.m { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 11px 14px; border-top: 1px solid var(--line); }
+.m:first-child { border-top: 0; }
+.m.down { background: linear-gradient(90deg, var(--crit-d), transparent 70%); box-shadow: inset 3px 0 0 var(--crit); }
+.mn { font: 700 15px/1.3 var(--sans); }
+.st { font: 800 11px/1.3 var(--mono); letter-spacing: .08em; text-align: right; align-self: center; }
+.st.up { color: var(--ok); } .st.down { color: var(--crit); } .st.unk { color: var(--dim); }
+.md { grid-column: 1 / -1; font: 12px/1.45 var(--mono); color: var(--muted); }
+.m.down .md { color: #ff8aa0; }
+.inc { grid-column: 1 / -1; font: 12.5px/1.4 var(--sans); padding-left: 12px; position: relative; margin-top: 2px; }
+.inc::before { content: "!"; position: absolute; left: 0; color: var(--crit); font: 800 12px var(--mono); }
+.inc a { color: var(--text); text-decoration: underline; text-decoration-color: var(--line2); text-underline-offset: 3px; }
 
-nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--card); border-top: 1px solid var(--line);
-  padding-bottom: env(safe-area-inset-bottom); z-index: 6; }
-nav a { flex: 1; text-align: center; padding: 9px 0 10px; font-size: 12px; font-weight: 600; color: var(--muted); position: relative; }
-nav a.on { color: var(--accent); }
-nav svg { display: block; margin: 0 auto 2px; width: 24px; height: 24px; }
-.badge { position: absolute; top: 4px; left: calc(50% + 6px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
-  background: var(--crit); color: #fff; font-size: 11px; line-height: 18px; }
+nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: rgba(7, 9, 12, .92); backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--line2); padding-bottom: env(safe-area-inset-bottom); z-index: 6; }
+nav a { flex: 1; text-align: center; padding: 11px 0 12px; font: 700 10px/1 var(--mono); letter-spacing: .14em; color: var(--muted);
+  position: relative; text-transform: uppercase; }
+nav a.on { color: var(--acid); }
+nav a.on::before { content: ""; position: absolute; top: -1px; left: 30%; right: 30%; height: 2px; background: var(--acid); box-shadow: 0 0 10px var(--acid); }
+nav svg { display: block; margin: 0 auto 6px; width: 22px; height: 22px; }
+.badge { position: absolute; top: 6px; left: calc(50% + 8px); min-width: 18px; height: 16px; padding: 0 4px; background: var(--crit); color: #fff;
+  font: 800 10px/16px var(--mono); letter-spacing: 0; }
 </style>
 </head>
 <body>
 <header id="hdr"></header>
 <main id="app"></main>
 <nav>
-  <a href="#/" id="nav-cves"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="M12 8v5M12 16.5v.01"/></svg>Vulnerabilities<span class="badge" id="b-cves" hidden></span></a>
-  <a href="#/status" id="nav-status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Services<span class="badge" id="b-status" hidden></span></a>
+  <a href="#/" id="nav-cves"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M12 3l8 3v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="M12 8v5M12 16v1"/></svg>Threats<span class="badge" id="b-cves" hidden></span></a>
+  <a href="#/status" id="nav-status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Uptime<span class="badge" id="b-status" hidden></span></a>
 </nav>
 <script>
 const $ = s => document.querySelector(s);
@@ -160,21 +226,22 @@ const data = {
   health: () => api(STATIC ? "api/health.json" : "api/health"),
 };
 const state = { view: "important", q: "" };
-const SEV = { CRITICAL: "critical", HIGH: "high", MEDIUM: "medium", LOW: "low" };
-const JOB = { nvd: "NVD", kev: "CISA KEV", epss: "EPSS", sites: "sites", status: "services" };
+const SEV_SHORT = { CRITICAL: "CRIT", HIGH: "HIGH", MEDIUM: "MED", LOW: "LOW" };
+const JOB = { nvd: "NVD", kev: "KEV", epss: "EPSS", sites: "SITES", status: "STATUS" };
 
 function rel(ts) {
   if (!ts) return "";
   const s = (Date.now() - new Date(ts)) / 1000;
-  if (s < 60) return "just now";
-  if (s < 3600) return Math.floor(s / 60) + " min ago";
+  if (s < 60) return "now";
+  if (s < 3600) return Math.floor(s / 60) + "m ago";
   if (s < 86400) return Math.floor(s / 3600) + "h ago";
   if (s < 86400 * 7) return Math.floor(s / 86400) + "d ago";
-  return new Date(ts).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
+  return date(ts);
 }
+const date = ts => new Date(ts).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
 function dur(ts) {
   const s = (Date.now() - new Date(ts)) / 1000;
-  if (s < 3600) return Math.max(1, Math.floor(s / 60)) + " min";
+  if (s < 3600) return Math.max(1, Math.floor(s / 60)) + "m";
   if (s < 86400) return Math.floor(s / 3600) + "h";
   return Math.floor(s / 86400) + "d";
 }
@@ -183,106 +250,139 @@ function nav(tab) {
   $("#nav-cves").classList.toggle("on", tab === "cves");
   $("#nav-status").classList.toggle("on", tab === "status");
 }
-const logo = `<img src="icon.svg" alt="">`;
+// "Remote, no login → full system takeover": highlight the outcome
+const vec = s => { const [how, what] = esc(s).split(" → "); return what ? `${how} → <em>${what}</em>` : how; };
 
-/* ---------- vulnerability list ---------- */
-let qTimer;
+let health = null;
+function brand() {
+  const errs = health ? Object.values(health.jobs).filter(j => j.error).length : 0;
+  const when = health ? (STATIC ? rel(health.generated) : rel(health.jobs.nvd?.last_ok)) : "";
+  return `<div class="brand"><img src="icon.svg" alt=""><b>BUG<i>BARK</i></b>
+    <span class="live ${errs ? "err" : ""}">${errs ? "DEGRADED" : "LIVE"}${when ? " · " + when.toUpperCase() : ""}</span></div>`;
+}
+
+/* ---------- threats ---------- */
+let qTimer, counts = { important: "–", kev: "–", down: "–" };
 async function showList() {
   nav("cves");
-  $("#hdr").innerHTML = `<h1>${logo}Vulnerabilities</h1>
-    <div class="chips">
-      ${[["important", "Major"], ["kev", "Exploited"], ["all", "All recent"]].map(([v, l]) =>
-        `<button class="chip ${state.view === v ? "on" : ""}" data-v="${v}">${l}</button>`).join("")}
-    </div>
-    <input class="search" id="q" placeholder="Search: Windows, Chrome, CVE-2026-…" value="${esc(state.q)}">`;
-  document.querySelectorAll(".chip").forEach(b => b.onclick = () => { state.view = b.dataset.v; showList(); });
-  $("#q").oninput = e => { clearTimeout(qTimer); qTimer = setTimeout(() => { state.q = e.target.value; loadList(); }, 250); };
+  renderHeader();
   await loadList();
 }
+function renderHeader() {
+  $("#hdr").innerHTML = brand();
+}
 async function loadList() {
-  const [d, h] = await Promise.all([
-    data.cves(state.view, state.q), data.health()]);
+  const [d, h, kev, mon] = await Promise.all([
+    data.cves(state.view, state.q), data.health(),
+    state.view === "kev" ? null : data.cves("kev", ""), data.monitors()]);
+  health = h;
+  renderHeader();
   setBadge("#b-cves", d.new);
-  const items = d.items.map(c => `
-    <a class="card l-${c.level || "none"} ${c.status === "dismissed" || c.status === "done" ? "dim" : ""}" href="#/cve/${c.id}">
-      <div class="r1">${c.status === "new" && c.important ? '<span class="dot"></span>' : ""}
-        <span class="cid">${c.id}</span>
-        ${c.score != null ? `<span class="score s-${c.severity}">${c.score.toFixed(1)}</span>` : ""}</div>
-      <div class="prod">${esc(c.product || "Unknown product")}</div>
-      ${c.short ? `<div class="short">${esc(c.short)}</div>` : `<div class="short">${esc(c.summary.slice(0, 110))}…</div>`}
-      <div class="tags">
-        ${c.kev ? '<span class="tag kev">⚠ Exploited</span>' : ""}
-        ${c.epss != null && c.epss >= .1 ? `<span class="tag epss">EPSS ${Math.round(c.epss * 100)}%</span>` : ""}
-        ${c.status === "done" ? '<span class="tag">✓ Handled</span>' : ""}
-        <span class="when">${rel(c.kev && c.kev_added > c.published ? c.kev_added : c.published)}</span>
+  setBadge("#b-status", mon.down);
+  if (state.view === "important" && !state.q) counts.important = d.items.length;
+  counts.kev = (state.view === "kev" ? d : kev).items.length;
+  counts.down = mon.down;
+  const rows = d.items.map(c => `
+    <a class="row s-${c.severity || "none"} ${c.kev ? "kev" : ""} ${c.status === "dismissed" || c.status === "done" ? "dim" : ""}" href="#/cve/${c.id}">
+      <div class="sc"><b>${c.score != null ? c.score.toFixed(1) : "—"}</b><span>${SEV_SHORT[c.severity] || "N/A"}</span></div>
+      <div class="rb">
+        <div class="meta">${c.status === "new" && c.important ? '<span class="new"></span>' : ""}<span>${c.id}</span>
+          <span class="when">${rel(c.kev && c.kev_added > c.published ? c.kev_added : c.published)}</span></div>
+        <div class="prod">${esc(c.product || "Unknown product")}</div>
+        <div class="vec">${c.short ? vec(c.short) : esc(c.summary.slice(0, 90)) + "…"}</div>
+        ${c.kev || (c.epss != null && c.epss >= .1) || c.status === "done" ? `<div class="flags">
+          ${c.kev ? '<span class="flag kev">EXPLOITED</span>' : ""}
+          ${c.epss != null && c.epss >= .1 ? `<span class="flag epss">EPSS ${Math.round(c.epss * 100)}%</span>` : ""}
+          ${c.status === "done" ? '<span class="flag done">✓ HANDLED</span>' : ""}</div>` : ""}
       </div>
     </a>`).join("");
-  $("#app").innerHTML =
-    (h.notify ? "" : `<div class="warn">Notifications are not set up: set the <b>NTFY_TOPIC</b> secret or environment variable</div>`) +
-    `<div class="list">${items || `<div class="empty">Nothing here yet.<br>The first check takes a few minutes.</div>`}</div>` +
-    `<p class="foot">${STATIC ? `Updated ${rel(h.generated)} · ` : ""}${Object.entries(h.jobs).filter(([k]) => ["nvd", "kev"].includes(k)).map(([k, j]) =>
-      j.error ? `<span class="err">${JOB[k]}: error</span>` : `${JOB[k]}: ${rel(j.last_ok)}`).join(" · ")}</p>`;
+  const tab = (v, n, l, cls) => `<button class="stat ${cls} ${state.view === v ? "on" : ""}" data-v="${v}"><b>${n}</b><span>${l}</span></button>`;
+  $("#app").innerHTML = `
+    <div class="stats">
+      ${tab("important", counts.important, "Major", "acid")}
+      ${tab("kev", counts.kev, "Exploited", "crit")}
+      ${tab("all", "∑", "All recent", "")}
+    </div>
+    ${h.notify ? "" : `<div class="warn">! Notifications are off: set the NTFY_TOPIC secret or environment variable</div>`}
+    <input class="search" id="q" placeholder="vendor, product or CVE id" value="${esc(state.q)}" autocomplete="off">
+    <div class="label">${{ important: "Major threats", kev: "Exploited in the wild", all: "All recent CVEs" }[state.view]}${state.q ? ` · "${esc(state.q)}"` : ""} · ${d.items.length}</div>
+    <div class="list">${rows || `<div class="empty">Nothing here yet.<br>The first check takes a few minutes.</div>`}</div>
+    <p class="foot">${Object.entries(h.jobs).map(([k, j]) =>
+      j.error ? `<span class="err">${JOB[k]} ERR</span>` : `${JOB[k]} ${rel(j.last_ok)}`).join(" · ")}</p>`;
+  document.querySelectorAll(".stat").forEach(b => b.onclick = () => { state.view = b.dataset.v; loadList(); });
+  const q = $("#q");
+  q.oninput = e => { clearTimeout(qTimer); qTimer = setTimeout(() => {
+    state.q = e.target.value; loadList().then(() => { const n = $("#q"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); });
+  }, 300); };
 }
 
 /* ---------- single vulnerability ---------- */
 async function showDetail(id) {
   nav("cves");
-  $("#hdr").innerHTML = `<a class="back" href="#/">‹ Back</a>`;
-  $("#app").innerHTML = `<div class="empty">Loading…</div>`;
+  renderHeader();
+  $("#app").innerHTML = `<div class="empty">LOADING ${esc(id)}…</div>`;
   let c;
   try { c = await data.cve(id); } catch (e) {
-    $("#app").innerHTML = `<div class="empty">${esc(id)} is not in the dashboard.<br><br>
-      <a class="back" href="https://nvd.nist.gov/vuln/detail/${esc(id)}" target="_blank" rel="noopener">Open in NVD →</a></div>`;
+    $("#app").innerHTML = `<a class="back" href="#/">← BACK</a><div class="empty">${esc(id)} is not in the dashboard.<br><br>
+      <a class="back" href="https://nvd.nist.gov/vuln/detail/${esc(id)}" target="_blank" rel="noopener">OPEN IN NVD →</a></div>`;
     return;
   }
   const k = c.kev_info, ex = c.explain;
   const fixRefs = c.refs.filter(r => r.tags.some(t => ["Patch", "Vendor Advisory", "Release Notes", "Mitigation"].includes(t)));
   const otherRefs = c.refs.filter(r => !fixRefs.includes(r));
   const link = r => !safeUrl(r.url) ? "" : `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.url.replace(/^https?:\/\//, ""))}
-    ${r.tags.length ? `<br><small>${r.tags.join(", ")}</small>` : ""}</a>`;
+    ${r.tags.length ? `<small>${r.tags.map(esc).join(" · ")}</small>` : ""}</a>`;
+  const lit = c.score != null ? Math.round(c.score) : 0;
+  const sev = c.severity || "none";
 
   $("#app").innerHTML = `
-    <div class="dh">
-      <div class="cid">${c.id}</div>
-      <div class="prod">${esc(c.product || "Unknown product")}</div>
-      <div class="short">Published ${rel(c.published)}${c.kev ? ` · exploited since ${new Date(c.kev_added).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}` : ""}</div>
+    <a class="back" href="#/">← BACK</a>
+    <div class="hero s-${sev}">
+      <div class="hid">${c.id} · PUBLISHED ${date(c.published).toUpperCase()}</div>
+      <h1>${esc(c.product || "Unknown product")}</h1>
+      <div class="score s-${sev}">
+        <span class="big">${c.score != null ? c.score.toFixed(1) : "—"}</span>
+        <div class="gauge"><div class="bars">${Array.from({ length: 10 }, (_, i) => `<i class="${i < lit ? "on" : ""}"></i>`).join("")}</div>
+          <span>CVSS · ${sev === "none" ? "not scored" : sev.toLowerCase()}</span></div>
+      </div>
+      ${c.kev ? `<div class="exploit">EXPLOITED IN THE WILD SINCE ${date(c.kev_added).toUpperCase()}${k && k.ransomware ? " · RANSOMWARE" : ""}</div>` : ""}
     </div>
-    <div class="big">
-      <div class="stat"><b style="color:var(--${c.severity === "CRITICAL" ? "crit" : c.severity === "HIGH" ? "high" : "text"})">${c.score != null ? c.score.toFixed(1) : "—"}</b><span>CVSS · ${SEV[c.severity] || "not scored"}</span></div>
-      <div class="stat"><b>${c.epss != null ? Math.round(c.epss * 100) + "%" : "—"}</b><span>EPSS · attack chance</span></div>
-      ${c.kev ? `<div class="stat kev"><b>Yes</b><span>Exploited now</span></div>` : ""}
+    <div class="tiles">
+      <div class="tile"><b>${c.epss != null ? Math.round(c.epss * 100) + "%" : "—"}</b><span>EPSS · 30d risk</span></div>
+      <div class="tile"><b>${esc((c.cwe || "—").replace("CWE-", "CWE "))}</b><span>Weakness</span></div>
+      <div class="tile"><b>${c.fixed.length ? esc(c.fixed[0]) : "—"}</b><span>Fixed in</span></div>
     </div>
 
-    ${c.reasons.length ? `<section class="box"><h3>Why it matters</h3><ul>${c.reasons.map(r => `<li class="reason">${esc(r)}</li>`).join("")}</ul></section>` : ""}
+    ${c.reasons.length ? `<div class="sec why"><h3>Why it matters</h3><ul>${c.reasons.map(r => `<li>${esc(r)}</li>`).join("")}</ul></div>` : ""}
 
-    ${ex.kind || ex.how.length || ex.impact.length ? `<section class="box"><h3>Risk</h3><ul>
+    ${ex.kind || ex.how.length || ex.impact.length ? `<div class="sec"><h3>Risk</h3><ul>
       ${ex.kind ? `<li><b>Type:</b> ${esc(ex.kind)}</li>` : ""}
       ${ex.how.length ? `<li><b>Attack:</b> ${esc(ex.how.join(", "))}</li>` : ""}
       ${ex.impact.length ? `<li><b>Impact:</b> ${esc(ex.impact.join("; "))}</li>` : ""}
-    </ul></section>` : ""}
+    </ul></div>` : ""}
 
-    <section class="box"><h3>What to do</h3><ul>
-      ${k && k.action ? `<li>${esc(k.action)}${k.due ? ` <small>(CISA deadline: ${esc(k.due)})</small>` : ""}</li>` : ""}
-      ${c.fixed.length ? `<li><b>Update to:</b> ${c.fixed.map(esc).join(", ")} or later</li>` : ""}
-      ${fixRefs.length ? `<li>See the vendor fix and instructions in the links below</li>` : ""}
+    <div class="sec"><h3>What to do</h3><ul>
+      ${k && k.action ? `<li>${esc(k.action)}${k.due ? ` <span class="ver">(CISA deadline ${esc(k.due)})</span>` : ""}</li>` : ""}
+      ${c.fixed.length ? `<li><b>Update to</b> <span class="ver">${c.fixed.map(esc).join(", ")}</span> or later</li>` : ""}
+      ${fixRefs.length ? `<li>Vendor fix and instructions are in the links below</li>` : ""}
       ${!c.fixed.length && !fixRefs.length && !(k && k.action) ? `<li>No fix listed yet. Watch for vendor announcements.</li>` : ""}
-    </ul></section>
+    </ul></div>
 
-    ${c.affected.length ? `<section class="box"><h3>Affected versions</h3><ul>
-      ${c.affected.slice(0, 12).map(a => `<li><b>${esc([a.vendor, a.product].filter(x => x && x.toLowerCase() !== "n/a").join(" "))}</b>: ${esc(a.versions.join(", ") || "versions not specified")}</li>`).join("")}
+    ${c.affected.length ? `<div class="sec"><h3>Affected versions</h3><ul>
+      ${c.affected.slice(0, 12).map(a => `<li class="ver"><b>${esc([a.vendor, a.product].filter(x => x && x.toLowerCase() !== "n/a").join(" "))}</b><br>${esc(a.versions.join(", ") || "versions not specified")}</li>`).join("")}
       ${c.affected.length > 12 ? `<li>…and ${c.affected.length - 12} more</li>` : ""}
-    </ul></section>` : ""}
+    </ul></div>` : ""}
 
-    <section class="box"><h3>Description</h3>
-      ${k && k.name ? `<p class="reason" style="margin:0 0 6px">${esc(k.name)}</p>` : ""}
+    <div class="sec"><h3>Description</h3>
+      ${k && k.name ? `<p class="kname">${esc(k.name)}</p>` : ""}
       <div class="desc">${esc(c.description || "No description yet")}</div>
-    </section>
+    </div>
 
-    <section class="box links"><h3>Links</h3>
-      <a href="https://nvd.nist.gov/vuln/detail/${c.id}" target="_blank" rel="noopener">nvd.nist.gov: NVD entry</a>
-      ${c.kev ? `<a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=${c.id}" target="_blank" rel="noopener">cisa.gov: KEV catalog</a>` : ""}
+    <div class="sec links"><h3>Links</h3>
+      <a href="https://nvd.nist.gov/vuln/detail/${c.id}" target="_blank" rel="noopener">nvd.nist.gov/vuln/detail/${c.id}<small>NVD entry</small></a>
+      ${c.kev ? `<a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=${c.id}" target="_blank" rel="noopener">cisa.gov/known-exploited-vulnerabilities<small>KEV catalog</small></a>` : ""}
       ${[...fixRefs, ...otherRefs].slice(0, 12).map(link).join("")}
-    </section>
+    </div>
 
     <div class="act">
       <button class="btn ${c.status === "done" ? "on" : ""}" data-s="done">✓ Handled</button>
@@ -295,38 +395,44 @@ async function showDetail(id) {
     document.querySelectorAll(".act .btn").forEach(x => x.classList.toggle("on", x.dataset.s === s));
   });
   window.scrollTo(0, 0);
+  data.health().then(h => { health = h; renderHeader(); }).catch(() => {});
 }
 
-/* ---------- services ---------- */
+/* ---------- uptime ---------- */
 async function showStatus() {
   nav("status");
-  $("#hdr").innerHTML = `<h1>${logo}Services</h1>`;
-  const d = await data.monitors();
+  renderHeader();
+  const [d, h] = await Promise.all([data.monitors(), data.health()]);
+  health = h;
+  renderHeader();
   setBadge("#b-status", d.down);
   const own = d.items.filter(i => i.kind !== "status"), pub = d.items.filter(i => i.kind === "status");
   const row = i => {
-    const cls = i.up === 1 ? "up" : i.up === 0 ? "down" : "";
-    const right = i.up === 0 && i.since ? `down for<br>${dur(i.since)}` : i.latency != null ? `${i.latency} ms` : "";
-    return `<div class="mrow"><span class="mdot ${cls}"></span>
-      <div style="min-width:0"><div class="mname">${esc(i.name)}</div>
-        <div class="mdet ${i.up === 0 ? "bad" : ""}">${esc(i.kind === "status" ? i.detail : (i.up === 0 ? i.detail : i.target))}</div>
-        ${i.incidents.map(n => `<div class="inc">• ${safeUrl(n.url) ? `<a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.name)}</a>` : esc(n.name)}</div>`).join("")}
-        ${i.components.length ? `<div class="mdet">Affected: ${esc(i.components.slice(0, 5).join(", "))}</div>` : ""}
-      </div><div class="mright">${right}</div></div>`;
+    const st = i.up === 1 ? `<span class="st up">${i.latency != null ? i.latency + " MS" : "UP"}</span>`
+      : i.up === 0 ? `<span class="st down">DOWN${i.since ? " " + dur(i.since).toUpperCase() : ""}</span>` : `<span class="st unk">PENDING</span>`;
+    return `<div class="m ${i.up === 0 ? "down" : ""}">
+      <div class="mn">${esc(i.name)}</div>${st}
+      <div class="md">${esc(i.kind === "status" ? i.detail : (i.up === 0 ? i.detail : i.target))}</div>
+      ${i.incidents.map(n => `<div class="inc">${safeUrl(n.url) ? `<a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.name)}</a>` : esc(n.name)}</div>`).join("")}
+      ${i.components.length ? `<div class="md">affected: ${esc(i.components.slice(0, 4).join(", "))}${i.components.length > 4 ? ` +${i.components.length - 4}` : ""}</div>` : ""}
+    </div>`;
   };
+  const total = d.items.length;
   $("#app").innerHTML = `
-    <div class="banner ${d.down ? "bad" : "ok"}"><span class="big-dot"></span>${d.down ? `Issues detected: ${d.down}` : "All systems operational"}</div>
-    <h2>My sites &amp; services</h2>
-    ${own.length ? `<div class="mon">${own.map(row).join("")}</div>` : `<div class="empty" style="padding:16px">Add your sites in config.toml → [[monitor.sites]]</div>`}
-    <h2>Popular services</h2>
-    <div class="mon">${pub.map(row).join("") || `<div class="empty">No data</div>`}</div>`;
+    <div class="sys ${d.down ? "bad" : "ok"}"><span class="dot"></span>
+      <div><b>${d.down ? `${d.down} ${d.down === 1 ? "INCIDENT" : "INCIDENTS"}` : "ALL SYSTEMS NOMINAL"}</b>
+      <span>${total - d.down}/${total} operational</span></div></div>
+    <div class="label">My sites &amp; services · ${own.length}</div>
+    ${own.length ? `<div class="mon">${own.map(row).join("")}</div>` : `<div class="empty" style="padding:14px">add sites in config.toml → [[monitor.sites]]</div>`}
+    <div class="label">Public services · ${pub.length}</div>
+    <div class="mon">${pub.sort((a, b) => (a.up ?? 2) - (b.up ?? 2)).map(row).join("") || `<div class="empty">no data</div>`}</div>`;
 }
 
 function route() {
   const h = location.hash;
   if (h.startsWith("#/q/")) { state.view = "important"; state.q = decodeURIComponent(h.slice(4)); }
   const p = h.startsWith("#/cve/") ? showDetail(h.slice(6)) : h === "#/status" ? showStatus() : showList();
-  p.catch(e => { $("#app").innerHTML = `<div class="empty">Cannot reach the server: ${esc(e.message)}</div>`; });
+  p.catch(e => { $("#app").innerHTML = `<div class="empty">NO SIGNAL: ${esc(e.message)}</div>`; });
 }
 window.addEventListener("hashchange", route);
 route();
@@ -336,7 +442,6 @@ setInterval(() => {
   if (h === "#/status") showStatus().catch(() => {});
   else if (!h.startsWith("#/cve/") && document.activeElement?.id !== "q") loadList().catch(() => {});
 }, 60000);
-data.monitors().then(d => setBadge("#b-status", d.down)).catch(() => {});
 </script>
 </body>
 </html>

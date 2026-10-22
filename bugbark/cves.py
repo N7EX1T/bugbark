@@ -264,7 +264,7 @@ class Engine:
             kev = sum(1 for i in ids if (self.db.get_cve(i) or {}).get("kev"))
             self.notifier.send(
                 "✅ BugBark is running",
-                f"Major vulnerabilities in the last {self.c['initial_days']} days: {found}"
+                f"Major vulnerabilities in the last {self.c['initial_days']} day{'s' if self.c['initial_days'] != 1 else ''}: {found}"
                 + (f", {kev} already exploited in the wild" if kev else "")
                 + ". New ones will show up here.",
                 priority=3, click=util.panel_url(self.cfg),

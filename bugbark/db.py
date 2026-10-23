@@ -42,7 +42,13 @@ CREATE TABLE IF NOT EXISTS monitors(
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT);
 """
 
-JSON_COLS = {"data": {}, "reasons": [], "notified": [], "extra": {}}
+JSON_COLS = {"data": {}, "reasons": [], "notified": [], "extra": {}, "poc": []}
+
+# Columns added after the first release: (table, column, definition)
+MIGRATIONS = [
+    ("cves", "poc", "TEXT DEFAULT '[]'"),
+    ("cves", "poc_checked", "TEXT"),
+]
 
 
 def _row(r):
@@ -64,6 +70,10 @@ class DB:
         with self.lock:
             self.conn.execute("PRAGMA journal_mode=WAL")
             self.conn.executescript(SCHEMA)
+            for table, col, decl in MIGRATIONS:
+                if col not in {r[1] for r in self.conn.execute(f"PRAGMA table_info({table})")}:
+                    self.conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {decl}")
+            self.conn.commit()
 
     def q(self, sql, args=()):
         with self.lock:
@@ -114,6 +124,9 @@ class DB:
 
     def set_kev_flag(self, cid, date_added):
         self.x("UPDATE cves SET kev=1, kev_added=? WHERE id=?", (date_added, cid))
+
+    def set_poc(self, cid, pocs, checked):
+        self.x("UPDATE cves SET poc=?, poc_checked=? WHERE id=?", (json.dumps(pocs), checked, cid))
 
     def set_epss(self, rows):
         self.xmany("UPDATE cves SET epss=?, epss_pct=? WHERE id=?", rows)

@@ -40,7 +40,13 @@ DEFAULTS = {
         "vendors": DEFAULT_VENDORS,
         "watch": [],
         "watch_min_cvss": 7.0,
+        # "all": every major CVE; "exploited": only actively exploited ones and newly published exploits;
+        # "off": nothing instant, rely on the daily digest
+        "instant": "all",
+        "poc_search": True,
+        "github_token": "",
     },
+    "digest": {"enabled": True, "hour_utc": 6},
     "monitor": {
         "interval_seconds": 60,
         "fail_threshold": 2,
@@ -81,6 +87,7 @@ ENV_OVERRIDES = {
     "TELEGRAM_TOKEN": ("notify", "telegram_token"),
     "TELEGRAM_CHAT_ID": ("notify", "telegram_chat_id"),
     "NVD_API_KEY": ("cve", "nvd_api_key"),
+    "GITHUB_TOKEN": ("cve", "github_token"),
     "BUGBARK_PUBLIC_URL": ("web", "public_url"),
     "BUGBARK_WEB_TOKEN": ("web", "token"),
 }

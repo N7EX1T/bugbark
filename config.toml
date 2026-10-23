@@ -33,6 +33,12 @@ epss_threshold = 0.5
 any_vendor_min_cvss = 0
 # Max individual notifications per check; the rest are sent as one summary
 max_per_run = 8
+# Instant alerts: "all" = every major CVE, "exploited" = only actively exploited ones and
+# newly published exploit code (everything else goes to the daily digest), "off" = digest only
+instant = "all"
+# Search GitHub for public exploit code (PoC repositories) for major CVEs.
+# Uses GITHUB_TOKEN when available (set automatically on GitHub Actions).
+poc_search = true
 initial_days = 1
 keep_days = 60
 
@@ -57,6 +63,11 @@ vendors = [
     "WinRAR", "7-Zip", "Telegram", "WhatsApp", "Zoom", "Node.js", "OpenVPN",
     "Synology", "QNAP", "Samsung", "Qualcomm", "Intel", "AMD", "NVIDIA",
 ]
+
+[digest]
+# One summary per day: major CVEs of the last 24h, top threats, and what is down
+enabled = true
+hour_utc = 6               # 06:00 UTC = 09:00 in UTC+3
 
 [monitor]
 interval_seconds = 60

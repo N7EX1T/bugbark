@@ -96,6 +96,7 @@ main { padding: 0 16px calc(96px + env(safe-area-inset-bottom)); max-width: 760p
 .flag { font: 800 10px/1 var(--mono); letter-spacing: .08em; padding: 4px 6px; border: 1px solid var(--line2); color: var(--muted); }
 .flag.kev { color: #fff; background: var(--crit); border-color: var(--crit); animation: glow 1.6s infinite; }
 .flag.epss { color: var(--high); border-color: rgba(255, 159, 26, .5); }
+.flag.poc { color: #ff5ce1; border-color: rgba(255, 92, 225, .55); }
 .flag.done { color: var(--acid); border-color: rgba(182, 255, 59, .4); }
 @keyframes glow { 50% { box-shadow: 0 0 12px rgba(255, 56, 96, .7); } }
 .empty { text-align: center; color: var(--muted); padding: 44px 10px; font: 13px/1.6 var(--mono); }
@@ -123,6 +124,12 @@ main { padding: 0 16px calc(96px + env(safe-area-inset-bottom)); max-width: 760p
 .exploit { margin-top: 14px; padding: 10px 12px; background: var(--crit); color: #fff; font: 800 12px/1.4 var(--mono); letter-spacing: .06em;
   display: flex; align-items: center; gap: 8px; }
 .exploit::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: pulse 1s infinite; flex: none; }
+.poc-strip { margin-top: 8px; padding: 9px 12px; border: 1px solid rgba(255, 92, 225, .6); color: #ff5ce1;
+  background: rgba(255, 92, 225, .08); font: 800 12px/1.4 var(--mono); letter-spacing: .06em; }
+.sec.pocs a { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.sec.pocs a span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.pocs .stars { color: var(--muted); flex: none; }
+.caution { font: 11.5px/1.5 var(--mono); color: #ff5ce1; margin: 0 0 8px; }
 .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line2); border: 1px solid var(--line2); margin-top: 10px; }
 .tile { background: var(--panel); padding: 10px 11px; min-width: 0; }
 .tile b { display: block; font: 800 17px/1.1 var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -227,7 +234,7 @@ const data = {
 };
 const state = { view: "important", q: "" };
 const SEV_SHORT = { CRITICAL: "CRIT", HIGH: "HIGH", MEDIUM: "MED", LOW: "LOW" };
-const JOB = { nvd: "NVD", kev: "KEV", epss: "EPSS", sites: "SITES", status: "STATUS" };
+const JOB = { nvd: "NVD", kev: "KEV", epss: "EPSS", exploits: "POC", digest: "DIGEST", sites: "SITES", status: "STATUS" };
 
 function rel(ts) {
   if (!ts) return "";
@@ -290,8 +297,9 @@ async function loadList() {
           <span class="when">${rel(c.kev && c.kev_added > c.published ? c.kev_added : c.published)}</span></div>
         <div class="prod">${esc(c.product || "Unknown product")}</div>
         <div class="vec">${c.short ? vec(c.short) : esc(c.summary.slice(0, 90)) + "…"}</div>
-        ${c.kev || (c.epss != null && c.epss >= .1) || c.status === "done" ? `<div class="flags">
+        ${c.kev || c.poc || (c.epss != null && c.epss >= .1) || c.status === "done" ? `<div class="flags">
           ${c.kev ? '<span class="flag kev">EXPLOITED</span>' : ""}
+          ${c.poc ? '<span class="flag poc">PUBLIC POC</span>' : ""}
           ${c.epss != null && c.epss >= .1 ? `<span class="flag epss">EPSS ${Math.round(c.epss * 100)}%</span>` : ""}
           ${c.status === "done" ? '<span class="flag done">✓ HANDLED</span>' : ""}</div>` : ""}
       </div>
@@ -346,6 +354,7 @@ async function showDetail(id) {
           <span>CVSS · ${sev === "none" ? "not scored" : sev.toLowerCase()}</span></div>
       </div>
       ${c.kev ? `<div class="exploit">EXPLOITED IN THE WILD SINCE ${date(c.kev_added).toUpperCase()}${k && k.ransomware ? " · RANSOMWARE" : ""}</div>` : ""}
+      ${c.poc ? `<div class="poc-strip">🧨 PUBLIC EXPLOIT CODE AVAILABLE · ${c.poc} SOURCE${c.poc > 1 ? "S" : ""}</div>` : ""}
     </div>
     <div class="tiles">
       <div class="tile"><b>${c.epss != null ? Math.round(c.epss * 100) + "%" : "—"}</b><span>EPSS · 30d risk</span></div>
@@ -372,6 +381,12 @@ async function showDetail(id) {
       ${c.affected.slice(0, 12).map(a => `<li class="ver"><b>${esc([a.vendor, a.product].filter(x => x && x.toLowerCase() !== "n/a").join(" "))}</b><br>${esc(a.versions.join(", ") || "versions not specified")}</li>`).join("")}
       ${c.affected.length > 12 ? `<li>…and ${c.affected.length - 12} more</li>` : ""}
     </ul></div>` : ""}
+
+    ${c.poc ? `<div class="sec links pocs"><h3>Public exploits</h3>
+      <p class="caution">Unverified. Fake PoCs often contain malware: never run them outside an isolated lab.</p>
+      ${c.pocs.filter(p => safeUrl(p.url)).map(p => `<a href="${esc(p.url)}" target="_blank" rel="noopener"><span>${esc(p.name)}</span><span class="stars">★ ${p.stars}</span></a>`).join("")}
+      ${c.exploit_refs.filter(safeUrl).map(u => `<a href="${esc(u)}" target="_blank" rel="noopener"><span>${esc(u.replace(/^https?:\/\//, ""))}</span><span class="stars">NVD</span></a>`).join("")}
+    </div>` : ""}
 
     <div class="sec"><h3>Description</h3>
       ${k && k.name ? `<p class="kname">${esc(k.name)}</p>` : ""}

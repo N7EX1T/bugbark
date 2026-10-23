@@ -88,6 +88,8 @@ def main():
         Job("kev", 3600, engine.run_kev),  # KEV first: the "exploited" flags depend on it
         Job("nvd", cfg["cve"]["check_minutes"] * 60, engine.run_nvd),
         Job("epss", 6 * 3600, engine.run_epss),
+        Job("exploits", 1800, engine.run_exploits),
+        Job("digest", 600, engine.run_digest),  # sends once a day, at [digest] hour_utc
     ]
     monitors = [
         Job("sites", cfg["monitor"]["interval_seconds"], monitor.run_checks),

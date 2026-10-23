@@ -42,6 +42,7 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}  # searching GitHub for public exploit code
           BUGBARK_PUBLIC_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
         run: python3 -m bugbark --config config.toml --data data --due --export site
 

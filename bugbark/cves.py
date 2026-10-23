@@ -6,6 +6,7 @@ from datetime import timedelta
 
 from . import util
 from .explain import explain
+from .exploits import exploit_refs, github_pocs
 from .util import log
 
 NVD_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
@@ -14,7 +15,8 @@ EPSS_URL = "https://api.first.org/data/v1/epss"
 
 LEVEL_RANK = {"kev": 3, "critical": 2, "high": 1, None: 0}
 # Reasons that re-send an already notified CVE, because it became more dangerous
-RENOTIFY_KEYS = {"kev", "epss"}
+RENOTIFY_KEYS = {"kev", "poc", "epss"}
+UPDATE_PREFIX = {"kev": "Now exploited: ", "poc": "Exploit published: ", "epss": "Risk increased: "}
 NA = {"", "n/a", "na", "-", "*", "unspecified", "unknown"}
 
 
@@ -342,6 +344,68 @@ class Engine:
         if updates:
             self.db.set_meta("epss_init", "1")
 
+    # --- public exploits ---
+    def run_exploits(self):
+        """Looks for PoC repositories on GitHub for recent major CVEs; rechecks each one every 12 hours."""
+        if not self.c["poc_search"]:
+            return
+        now = util.now()
+        since, recheck = util.iso(now - timedelta(days=14)), util.iso(now - timedelta(hours=12))
+        candidates = """FROM cves WHERE (important=1 OR kev=1) AND published >= ? AND status != 'dismissed'
+                        AND poc = '[]' AND (poc_checked IS NULL OR poc_checked < ?)"""
+        rows = self.db.q(f"SELECT id {candidates} ORDER BY poc_checked IS NOT NULL, published DESC LIMIT 25",
+                         (since, recheck))
+        # On the first sweep (and after upgrading) don't re-alert on CVEs that already had exploits
+        first_sweep = self.db.get_meta("poc_init") is None
+        token = self.c["github_token"]
+        found = []
+        for i, r in enumerate(rows):
+            if i:
+                time.sleep(2.2 if token else 6.5)  # GitHub search limit: 30/min with a token, 10/min without
+            try:
+                pocs = github_pocs(r["id"], token)
+            except Exception as e:
+                log.warning("GitHub search failed for %s: %s", r["id"], e)
+                break
+            self.db.set_poc(r["id"], pocs, util.iso(util.now()))
+            if pocs:
+                found.append(r["id"])
+        log.info("Exploits: checked %s CVEs, public PoC for %s", len(rows), len(found))
+        self.process(found, suppress=first_sweep)
+        if first_sweep and not self.db.q(f"SELECT 1 {candidates} AND poc_checked IS NULL LIMIT 1", (since, recheck)):
+            self.db.set_meta("poc_init", "1")
+
+    # --- daily digest ---
+    def run_digest(self):
+        d = self.cfg["digest"]
+        now = util.now()
+        today = now.strftime("%Y-%m-%d")
+        if not d["enabled"] or now.hour < d["hour_utc"] or self.db.get_meta("digest_last") == today:
+            return
+        if self.db.get_meta("nvd_last") is None:
+            return
+        since = util.iso(now - timedelta(hours=24))
+        rows = self.db.q("""SELECT * FROM cves WHERE important=1 AND status != 'dismissed'
+                            AND (published >= ? OR kev_added >= ?)""", (since, since))
+        rows.sort(key=lambda r: (LEVEL_RANK[r["level"]], bool(r["poc"]), r["score"] or 0), reverse=True)
+        kev = sum(1 for r in rows if r["kev"])
+        poc = sum(1 for r in rows if r["poc"])
+        lines = [f"Last 24h: {len(rows)} major · {kev} exploited · {poc} with public exploit"]
+        if rows:
+            lines += ["", "Top threats:"]
+            for r in rows[:5]:
+                tag = " · EXPLOITED" if r["kev"] else " · PoC" if r["poc"] else ""
+                score = f" · {r['score']:.1f}" if r["score"] is not None else ""
+                lines.append(f"• {r['id']} · {r['product'] or r['vendor'] or '?'}{score}{tag}")
+        else:
+            lines.append("Quiet day: no new major vulnerabilities.")
+        down = [m["name"] for m in self.db.q("SELECT name FROM monitors WHERE up=0 ORDER BY name")]
+        if down:
+            lines += ["", "Down now: " + ", ".join(down)]
+        self.notifier.send(f"📋 BugBark daily · {now.strftime('%b')} {now.day}", "\n".join(lines),
+                           priority=3, click=util.panel_url(self.cfg))
+        self.db.set_meta("digest_last", today)
+
     # --- assessment and notifications ---
     def assess(self, row):
         """Returns (level, human-readable reasons, reason keys)."""
@@ -381,6 +445,12 @@ class Engine:
             reasons.append(f"Maximum severity: {score:.1f}/10")
             keys.append("max")
             bump("critical")
+        # A public exploit only upgrades CVEs that are already major, otherwise every exploit-db entry would alert
+        pocs = len(row.get("poc") or []) + len(exploit_refs(data))
+        if keys and pocs:
+            reasons.append(f"Public exploit code available ({pocs} source{'s' if pocs > 1 else ''}, unverified)")
+            keys.append("poc")
+            bump("critical")
         return level, reasons, keys
 
     def process(self, ids, suppress=False):
@@ -395,12 +465,14 @@ class Engine:
                 continue
             notified = set(row["notified"])
             new = set(keys) - notified
+            update = None
             if notified:
                 new &= RENOTIFY_KEYS
                 if "kev" in notified:
-                    new.discard("epss")
+                    new -= {"poc", "epss"}
+                update = next((k for k in ("kev", "poc", "epss") if k in new), None)
             if new:
-                pending.append((dict(row, level=level, reasons=reasons), set(keys) | notified, bool(notified)))
+                pending.append((dict(row, level=level, reasons=reasons), set(keys) | notified, update))
         if not pending:
             return 0
         if not suppress:
@@ -411,6 +483,11 @@ class Engine:
 
     def _send_pending(self, pending):
         """Exploited CVEs and risk updates go out one by one; a batch from one vendor becomes one message."""
+        instant = self.c["instant"]
+        if instant == "off":
+            return
+        if instant == "exploited":
+            pending = [p for p in pending if p[0]["kev"] or p[2] in ("kev", "poc")]
         messages, groups = [], {}
         for p in pending:
             row, _, update = p
@@ -454,13 +531,13 @@ class Engine:
         self.notifier.send(title, "\n".join(lines), priority=4 if critical else 3, click=panel,
                            actions=[("Details", panel)] if panel else None)
 
-    def send_cve(self, row, update=False):
+    def send_cve(self, row, update=None):
         data = row["data"]
         ex = explain(data.get("vector"), data.get("cwe"))
-        emoji = "🚨" if row["kev"] else ("🔴" if row["level"] == "critical" else "🟠")
+        emoji = "🚨" if row["kev"] else "🧨" if update == "poc" else ("🔴" if row["level"] == "critical" else "🟠")
         name = row["product"] or row["vendor"] or "vulnerability"
         score = f" · {row['score']:.1f}" if row["score"] is not None else ""
-        prefix = "Now exploited: " if update and row["kev"] else ("Risk increased: " if update else "")
+        prefix = UPDATE_PREFIX.get(update, "")
         title = f"{emoji} {prefix}{row['id']} · {name}{score}"
         lines = []
         if ex["kind"]:
@@ -468,6 +545,10 @@ class Engine:
         if ex["short"]:
             lines.append(ex["short"])
         lines += ["• " + r for r in row["reasons"]]
+        pocs = row.get("poc") or []
+        if pocs:
+            lines.append(f"🧨 Public exploit: github.com/{pocs[0]['name']}" + (f" +{len(pocs) - 1} more" if len(pocs) > 1 else "")
+                         + " (unverified, don't run it outside a lab)")
         if data.get("fixed"):
             lines.append("✅ Fixed in: " + ", ".join(data["fixed"][:4]))
         lines += ["", util.shorten(data.get("description"), 280)]

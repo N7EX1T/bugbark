@@ -8,6 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from . import util
 from .explain import explain
+from .exploits import exploit_refs
 from .util import log
 
 STATIC = os.path.join(os.path.dirname(__file__), "static")
@@ -23,6 +24,7 @@ def list_item(r):
         "product": r["product"] or r["vendor"], "vendor": r["vendor"], "kev": bool(r["kev"]), "kev_added": r["kev_added"],
         "epss": r["epss"], "level": r["level"], "important": bool(r["important"]),
         "status": r["status"], "reasons": r["reasons"],
+        "poc": len(r["poc"] or []) + len(exploit_refs(data)),
         "short": explain(data.get("vector"), data.get("cwe"))["short"],
         "summary": (data.get("description") or "")[:220],
     }
@@ -73,6 +75,7 @@ class App:
             fixed=data.get("fixed", []), refs=data.get("refs", []),
             epss_pct=row["epss_pct"], explain=explain(data.get("vector"), data.get("cwe")),
             kev_info=kev["data"] if kev else None,
+            pocs=row["poc"] or [], exploit_refs=exploit_refs(data),
         )
         return out
 
@@ -85,7 +88,7 @@ class App:
 
     def health(self):
         jobs = {}
-        for name in ("nvd", "kev", "epss", "sites", "status"):
+        for name in ("nvd", "kev", "epss", "exploits", "digest", "sites", "status"):
             v = self.db.get_meta("job:" + name)
             if v:
                 jobs[name] = json.loads(v)

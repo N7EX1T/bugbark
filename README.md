@@ -18,6 +18,10 @@ Barks when a bug bites: push notifications to your phone about **major new vulne
 
 Each alert says in plain words what the risk is ("Remote, no login → full system takeover"), why it matters, and which version fixes it. A batch from one vendor (e.g. a Chrome release with 15 critical fixes) arrives as one message.
 
+**Public exploits.** For every major CVE it searches GitHub for proof-of-concept repositories (and reads NVD's exploit references). When exploit code shows up for a CVE you were already told about, you get a follow-up: "🧨 Exploit published". PoCs are listed as unverified: fake ones often carry malware.
+
+**Daily digest.** One morning summary: major CVEs of the last 24 hours, the top threats, and what is down. Set `instant = "exploited"` in `config.toml` to get only the urgent alerts instantly and everything else in the digest.
+
 **Outages.** Status of GitHub, Cloudflare, Discord, OpenAI, Claude, npm, Reddit and Dropbox, plus your own websites (HTTP) and servers (TCP port). You get one alert when something goes down and one when it recovers.
 
 **Dashboard.** Tap a notification to open the details: risk, affected versions, what to do, and links.
@@ -42,6 +46,8 @@ Optional secrets:
 | `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID` | Also send alerts to Telegram |
 | `NTFY_TOKEN` | Access token for a protected or self-hosted ntfy server |
 
+On GitHub Actions the exploit search uses the built-in `GITHUB_TOKEN`; self-hosted, set `GITHUB_TOKEN` to any token for a higher search rate limit.
+
 ### Good to know
 
 - **Everything on GitHub Pages is public**: the dashboard, the monitored site list, and the `state` branch where the database is kept between runs. CVE data is public anyway. Don't monitor anything you want to keep private.
@@ -50,7 +56,7 @@ Optional secrets:
 
 ## Configuration
 
-Edit [`config.toml`](config.toml): CVSS threshold, vendor list, a `watch` list for software you run yourself (alerts start from CVSS 7), your sites and ports, and status pages. Never put secrets there: they come from environment variables.
+Edit [`config.toml`](config.toml): CVSS threshold, vendor list, a `watch` list for software you run yourself (alerts start from CVSS 7), instant vs. digest alerts, digest time, your sites and ports, and status pages. Never put secrets there: they come from environment variables.
 
 ## Self-hosting
 

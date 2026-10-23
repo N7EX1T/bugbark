@@ -18,6 +18,13 @@ from .util import log
 from .web import serve
 
 
+JOB_NAMES = {
+    "nvd": "NVD (new CVEs)", "kev": "CISA KEV", "epss": "EPSS", "exploits": "exploit search",
+    "digest": "daily digest", "sites": "site checks", "status": "status pages",
+}
+ALERT_AFTER = 3600  # a check must keep failing this long before BugBark warns about itself
+
+
 class Job:
     def __init__(self, name, interval, fn):
         self.name, self.interval, self.fn = name, interval, fn
@@ -29,7 +36,7 @@ class Job:
         # Scheduled runs drift by a few minutes, so allow some slack
         return last is None or (util.now() - last).total_seconds() >= self.interval * 0.8
 
-    def run(self, db):
+    def run(self, db, health):
         key = "job:" + self.name
         state = json.loads(db.get_meta(key, "{}"))
         state["last_run"] = util.iso(util.now())
@@ -39,15 +46,44 @@ class Job:
         except Exception as e:
             log.exception("Job %s failed", self.name)
             state["error"] = str(e) or e.__class__.__name__
+        health.check(self.name, state)
         db.set_meta(key, json.dumps(state, ensure_ascii=False))
         self.next = time.time() + self.interval
 
 
-def run_jobs(jobs, db, stop):
+class Health:
+    """Warns once when a check keeps failing, and once more when it recovers."""
+
+    def __init__(self, cfg, notifier):
+        self.cfg, self.notifier = cfg, notifier
+
+    def check(self, name, state):
+        label = JOB_NAMES.get(name, name)
+        if state["error"] is None:
+            if state.pop("alerted", False):
+                self.notifier.send(f"✅ BugBark: {label} works again", "Alerts are back to normal.",
+                                   priority=3, click=util.panel_url(self.cfg))
+            state.pop("failing_since", None)
+            state.pop("failures", None)
+            return
+        state.setdefault("failing_since", state["last_run"])
+        state["failures"] = state.get("failures", 0) + 1
+        failing_for = (util.now() - util.parse_ts(state["failing_since"])).total_seconds()
+        if failing_for >= ALERT_AFTER and not state.get("alerted"):
+            self.notifier.send(
+                f"⚠ BugBark: {label} failing",
+                f"Failing for {util.duration(failing_for)} ({state['failures']} runs in a row).\n"
+                f"Last error: {util.shorten(state['error'], 200)}\n"
+                "Alerts from this check are delayed until it recovers.",
+                priority=4, click=util.panel_url(self.cfg))
+            state["alerted"] = True
+
+
+def run_jobs(jobs, db, health, stop):
     while not stop.is_set():
         for j in jobs:
             if time.time() >= j.next and not stop.is_set():
-                j.run(db)
+                j.run(db, health)
         stop.wait(1)
 
 
@@ -72,6 +108,7 @@ def main():
     notifier = Notifier(cfg)
     engine = Engine(cfg, db, notifier)
     monitor = Monitor(cfg, db, notifier)
+    health = Health(cfg, notifier)
 
     if args.test_notify:
         if not notifier.enabled:
@@ -100,7 +137,7 @@ def main():
         if args.once or args.due:
             for j in security + monitors:
                 if args.once or j.due(db):
-                    j.run(db)
+                    j.run(db, health)
         if args.export:
             n = export_site(cfg, db, engine, notifier, args.export)
             log.info("Exported dashboard with %s CVEs to %s", n, args.export)
@@ -110,7 +147,7 @@ def main():
     stop = threading.Event()
     signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))
     for jobs in (security, monitors):
-        threading.Thread(target=run_jobs, args=(jobs, db, stop), daemon=True).start()
+        threading.Thread(target=run_jobs, args=(jobs, db, health, stop), daemon=True).start()
     try:
         serve(cfg, db, engine, notifier)
     except KeyboardInterrupt:

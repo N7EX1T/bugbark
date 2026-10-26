@@ -223,7 +223,10 @@ class Engine:
             if e.code != 404:
                 raise
             # NVD answers 404 to a wrong or not yet activated key: carry on without it
-            log.warning("NVD rejected the API key (HTTP 404), continuing without it. Check the NVD_API_KEY secret.")
+            key = self.c["nvd_api_key"]
+            shape = "looks right" if re.fullmatch(r"[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", key) else "not the usual xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx form"
+            log.warning("NVD rejected the API key (HTTP 404), continuing without it. Check the NVD_API_KEY secret: "
+                        "%s characters, %s.", len(key), shape)
             self.c["nvd_api_key"] = ""
             return util.http_json(url, timeout=90, retries=4)
 

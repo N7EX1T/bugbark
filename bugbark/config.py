@@ -120,5 +120,5 @@ def load_config(path):
         pass
     for var, (section, key) in ENV_OVERRIDES.items():
         if os.environ.get(var):
-            cfg[section][key] = os.environ[var]
+            cfg[section][key] = os.environ[var].strip()
     return cfg

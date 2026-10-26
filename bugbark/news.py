@@ -150,6 +150,8 @@ class News:
     def run(self):
         if not self.n["enabled"]:
             return
+        now = util.now()
+        keep = util.iso(now - timedelta(days=8))
         fetched, failed = 0, []
         for source, url in self.n["feeds"].items():
             try:
@@ -158,11 +160,11 @@ class News:
                 log.warning("News: %s failed: %s", source, e)
                 failed.append(source)
                 continue
-            fetched += self.db.add_news(items, util.iso(util.now()))
+            # Some feeds list weeks of articles: skip what pruning would delete anyway
+            fetched += self.db.add_news([i for i in items if i["published"] >= keep], util.iso(now))
         if failed and len(failed) == len(self.n["feeds"]):
             raise RuntimeError("all news feeds failed")
-        now = util.now()
-        self.db.prune_news(util.iso(now - timedelta(days=8)))
+        self.db.prune_news(keep)
         first_run = self.db.get_meta("news_init") is None
         fresh = util.iso(now - LINK_WINDOW)
         big = [s for s in self.stories() if len(s["sources"]) >= self.n["min_sources"] and s["last"] >= fresh]

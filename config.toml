@@ -22,6 +22,7 @@ port = 8080
 
 [cve]
 check_minutes = 15
+# New CVEs come from CVE.org (minutes after publication) and from NVD (fuller data, a bit later).
 # Optional NVD_API_KEY makes NVD requests ~10x faster: https://nvd.nist.gov/developers/request-an-api-key
 # A CVE is "major" if ANY of these is true:
 #   - it is in the CISA KEV catalog (actively exploited)
@@ -68,6 +69,25 @@ vendors = [
 # One summary per day: major CVEs of the last 24h, top threats, and what is down
 enabled = true
 hour_utc = 6               # 06:00 UTC = 09:00 in UTC+3
+
+[news]
+# Security news from major outlets. Headlines about the same event are grouped into one story;
+# a story covered by min_sources outlets within two days is "big" and sends one alert.
+# All headlines are in the dashboard's News tab. Add or remove RSS feeds under [news.feeds].
+enabled = true
+min_sources = 3
+max_per_run = 3
+
+[news.feeds]
+BleepingComputer = "https://www.bleepingcomputer.com/feed/"
+"The Hacker News" = "https://feeds.feedburner.com/TheHackersNews"
+SecurityWeek = "https://www.securityweek.com/feed/"
+"The Record" = "https://therecord.media/feed"
+"Krebs on Security" = "https://krebsonsecurity.com/feed/"
+"Dark Reading" = "https://www.darkreading.com/rss.xml"
+"Help Net Security" = "https://www.helpnetsecurity.com/feed/"
+CyberScoop = "https://cyberscoop.com/feed/"
+"Infosecurity Magazine" = "https://www.infosecurity-magazine.com/rss/news/"
 
 [monitor]
 interval_seconds = 60

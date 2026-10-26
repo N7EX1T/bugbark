@@ -47,6 +47,24 @@ DEFAULTS = {
         "github_token": "",
     },
     "digest": {"enabled": True, "hour_utc": 6},
+    "news": {
+        "enabled": True,
+        # A story is "big" when this many outlets cover it within two days
+        "min_sources": 3,
+        "max_per_run": 3,
+        "interval_seconds": 1800,
+        "feeds": {
+            "BleepingComputer": "https://www.bleepingcomputer.com/feed/",
+            "The Hacker News": "https://feeds.feedburner.com/TheHackersNews",
+            "SecurityWeek": "https://www.securityweek.com/feed/",
+            "The Record": "https://therecord.media/feed",
+            "Krebs on Security": "https://krebsonsecurity.com/feed/",
+            "Dark Reading": "https://www.darkreading.com/rss.xml",
+            "Help Net Security": "https://www.helpnetsecurity.com/feed/",
+            "CyberScoop": "https://cyberscoop.com/feed/",
+            "Infosecurity Magazine": "https://www.infosecurity-magazine.com/rss/news/",
+        },
+    },
     "monitor": {
         "interval_seconds": 60,
         "fail_threshold": 2,
@@ -72,7 +90,7 @@ DEFAULTS = {
 
 def _merge(base, over):
     for k, v in over.items():
-        if isinstance(v, dict) and isinstance(base.get(k), dict) and k != "pages":
+        if isinstance(v, dict) and isinstance(base.get(k), dict) and k not in ("pages", "feeds"):
             _merge(base[k], v)
         else:
             base[k] = v

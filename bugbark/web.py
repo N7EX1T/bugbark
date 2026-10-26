@@ -71,13 +71,20 @@ class App:
             status=row["status"],
             description=data.get("description"),
             vector=data.get("vector"), cwe=data.get("cwe"), source=data.get("source"),
-            nvd_status=data.get("nvd_status"), affected=data.get("affected", []),
+            nvd_status=data.get("nvd_status"), origin=data.get("origin", "nvd"), affected=data.get("affected", []),
             fixed=data.get("fixed", []), refs=data.get("refs", []),
             epss_pct=row["epss_pct"], explain=explain(data.get("vector"), data.get("cwe")),
             kev_info=kev["data"] if kev else None,
             pocs=row["poc"] or [], exploit_refs=exploit_refs(data),
         )
         return out
+
+    def news(self):
+        min_sources = self.cfg["news"]["min_sources"]
+        stories = [dict(s, big=len(s["sources"]) >= min_sources) for s in self.engine.news.stories()]
+        # Multi-outlet stories first, then single headlines, newest first within each
+        stories.sort(key=lambda s: (s["big"], len(s["sources"]) > 1, s["last"]), reverse=True)
+        return {"items": stories[:150], "big": sum(1 for s in stories if s["big"]), "min_sources": min_sources}
 
     def monitors(self):
         rows = self.db.q("SELECT * FROM monitors ORDER BY kind, name")
@@ -88,7 +95,7 @@ class App:
 
     def health(self):
         jobs = {}
-        for name in ("nvd", "kev", "epss", "exploits", "digest", "sites", "status"):
+        for name in ("nvd", "cveorg", "kev", "epss", "exploits", "news", "digest", "sites", "status"):
             v = self.db.get_meta("job:" + name)
             if v:
                 jobs[name] = json.loads(v)
@@ -154,6 +161,8 @@ def make_handler(app):
                         return self._send(400, {"error": "invalid CVE ID"})
                     r = app.cve(cid)
                     return self._send(200, r) if r else self._send(404, {"error": "not found"})
+                if p == "/api/news":
+                    return self._send(200, app.news())
                 if p == "/api/monitors":
                     return self._send(200, app.monitors())
                 if p == "/api/health":

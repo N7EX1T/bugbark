@@ -1,11 +1,13 @@
 """Collects fresh CVEs (NVD), exploited-in-the-wild ones (CISA KEV) and EPSS scores, and picks the major ones."""
 import re
 import time
+import urllib.error
 import urllib.parse
 from datetime import timedelta
 
-from . import util
+from . import cveorg, util
 from .explain import explain
+from .news import News
 from .exploits import exploit_refs, github_pocs
 from .util import log
 
@@ -136,7 +138,9 @@ class Matcher:
             hit = self.find(structured)
             if hit:
                 return hit
-        labels = data.get("source", "").split("@")[-1].lower().split(".")[:-1]
+        # NVD gives an e-mail (secure@microsoft.com), CVE.org a short name (microsoft)
+        domain = data.get("source", "").split("@")[-1].lower()
+        labels = domain.split(".")[:-1] if "." in domain else [domain]
         for t, _, n in self.terms:
             if len(n) >= 3 and any(l == n or (len(n) >= 5 and l.startswith(n)) for l in labels):
                 return t
@@ -187,6 +191,7 @@ def parse_nvd(item):
     }
 
 
+CVEORG_LIMIT = 150  # records fetched per run; NVD catches up on the rest
 GROUP_MIN = 3  # this many CVEs from one vendor in one check are sent as a single message
 
 
@@ -205,12 +210,22 @@ class Engine:
         self.c = cfg["cve"]
         self.vendors = Matcher(self.c["vendors"])
         self.watch = Matcher(self.c["watch"]) if self.c["watch"] else None
+        self.news = News(cfg, db, notifier)
 
     # --- NVD ---
     def _nvd(self, params):
-        headers = {"apiKey": self.c["nvd_api_key"]} if self.c["nvd_api_key"] else {}
-        return util.http_json(NVD_URL + "?" + urllib.parse.urlencode(params), headers=headers,
-                              timeout=90, retries=4)
+        url = NVD_URL + "?" + urllib.parse.urlencode(params)
+        if not self.c["nvd_api_key"]:
+            return util.http_json(url, timeout=90, retries=4)
+        try:
+            return util.http_json(url, headers={"apiKey": self.c["nvd_api_key"]}, timeout=90, retries=4)
+        except urllib.error.HTTPError as e:
+            if e.code != 404:
+                raise
+            # NVD answers 404 to a wrong or not yet activated key: carry on without it
+            log.warning("NVD rejected the API key (HTTP 404), continuing without it. Check the NVD_API_KEY secret.")
+            self.c["nvd_api_key"] = ""
+            return util.http_json(url, timeout=90, retries=4)
 
     def _nvd_pause(self):
         # NVD rate limit: 5 requests per 30 s without a key, 50 with one
@@ -271,6 +286,36 @@ class Engine:
                 + ". New ones will show up here.",
                 priority=3, click=util.panel_url(self.cfg),
             )
+
+    # --- CVE.org ---
+    def run_cveorg(self):
+        """Picks up CVEs minutes after publication; NVD's fuller record replaces them once it has them."""
+        last = self.db.get_meta("cveorg_last")
+        if last is None:  # the first NVD load already covers the past
+            self.db.set_meta("cveorg_last", util.iso(util.now()))
+            return
+        changes, newest = cveorg.changes_since(last)
+        fresh = util.iso(util.now() - timedelta(days=3))
+        todo = []
+        for cid, (url, kind) in changes.items():
+            row = self.db.get_cve(cid)
+            # Only brand-new CVEs, and updates to the ones NVD doesn't have yet; older CVEs are NVD's job
+            if url and (row["data"].get("origin") == "cve.org" if row else kind == "new"):
+                todo.append(cid)
+        ids = []
+        for cid in todo[:CVEORG_LIMIT]:
+            try:
+                c = cveorg.fetch_record(changes[cid][0])
+            except Exception as e:
+                log.warning("CVE.org: could not fetch %s: %s", cid, e)
+                continue
+            if c["rejected"] or not c["published"] or c["published"] < fresh:
+                continue
+            self._store(c)
+            ids.append(cid)
+        log.info("CVE.org: %s changes, %s fresh CVEs stored", len(changes), len(ids))
+        self.process(ids)
+        self.db.set_meta("cveorg_last", newest)
 
     # --- CISA KEV ---
     def run_kev(self):
@@ -399,6 +444,9 @@ class Engine:
                 lines.append(f"• {r['id']} · {r['product'] or r['vendor'] or '?'}{score}{tag}")
         else:
             lines.append("Quiet day: no new major vulnerabilities.")
+        stories = [st for st in self.news.stories(days=1) if len(st["sources"]) >= self.cfg["news"]["min_sources"]]
+        if self.cfg["news"]["enabled"] and stories:
+            lines += ["", "In the news:"] + [f"• {util.shorten(st['title'], 90)}" for st in stories[:3]]
         down = [m["name"] for m in self.db.q("SELECT name FROM monitors WHERE up=0 ORDER BY name")]
         if down:
             lines += ["", "Down now: " + ", ".join(down)]
@@ -552,8 +600,11 @@ class Engine:
         if data.get("fixed"):
             lines.append("✅ Fixed in: " + ", ".join(data["fixed"][:4]))
         lines += ["", util.shorten(data.get("description"), 280)]
-        nvd = f"https://nvd.nist.gov/vuln/detail/{row['id']}"
+        if data.get("origin") == "cve.org":
+            ext = ("CVE.org", f"https://www.cve.org/CVERecord?id={row['id']}")
+        else:
+            ext = ("NVD", f"https://nvd.nist.gov/vuln/detail/{row['id']}")
         panel = util.panel_url(self.cfg, "cve/" + row["id"])
-        actions = ([("Details", panel)] if panel else []) + [("NVD", nvd)]
+        actions = ([("Details", panel)] if panel else []) + [ext]
         priority = 5 if row["kev"] else 4 if row["level"] == "critical" else 3
-        self.notifier.send(title, "\n".join(lines), priority=priority, click=panel or nvd, actions=actions)
+        self.notifier.send(title, "\n".join(lines), priority=priority, click=panel or ext[1], actions=actions)

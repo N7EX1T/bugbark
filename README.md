@@ -5,12 +5,13 @@ Barks when a bug bites: push notifications to your phone about **major new vulne
 <p>
   <img src="docs/1-list.png" width="260" alt="Vulnerability list">
   <img src="docs/2-detail.png" width="260" alt="Vulnerability details">
-  <img src="docs/3-services.png" width="260" alt="Service status">
+  <img src="docs/3-news.png" width="260" alt="Security news">
+  <img src="docs/4-services.png" width="260" alt="Service status">
 </p>
 
 ## What it does
 
-**Vulnerabilities.** Every 15 minutes it pulls fresh CVEs from [NVD](https://nvd.nist.gov) and alerts only on the ones that matter:
+**Vulnerabilities.** Every 15 minutes it pulls fresh CVEs from the official [CVE list](https://www.cve.org) (minutes after publication) and [NVD](https://nvd.nist.gov), and alerts only on the ones that matter:
 
 - **actively exploited** in the wild ([CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog)),
 - **likely to be exploited** soon ([EPSS](https://www.first.org/epss/) ≥ 50%),
@@ -20,7 +21,9 @@ Each alert says in plain words what the risk is ("Remote, no login → full syst
 
 **Public exploits.** For every major CVE it searches GitHub for proof-of-concept repositories (and reads NVD's exploit references). When exploit code shows up for a CVE you were already told about, you get a follow-up: "🧨 Exploit published". PoCs are listed as unverified: fake ones often carry malware.
 
-**Daily digest.** One morning summary: major CVEs of the last 24 hours, the top threats, and what is down. Set `instant = "exploited"` in `config.toml` to get only the urgent alerts instantly and everything else in the digest.
+**Daily digest.** One morning summary: major CVEs of the last 24 hours, the top threats, the biggest news stories, and what is down. Set `instant = "exploited"` in `config.toml` to get only the urgent alerts instantly and everything else in the digest.
+
+**Security news.** Headlines from BleepingComputer, The Hacker News, SecurityWeek, The Record, Krebs on Security, Dark Reading and others are grouped into stories. When three or more outlets cover the same event (a big breach, a ransomware attack, a mass-exploited bug), you get one alert. Everything else is in the dashboard's News tab and in the daily digest.
 
 **Outages.** Status of GitHub, Cloudflare, Discord, OpenAI, Claude, npm, Reddit and Dropbox, plus your own websites (HTTP) and servers (TCP port). You get one alert when something goes down and one when it recovers.
 
@@ -42,7 +45,7 @@ Optional secrets:
 
 | Secret | Purpose |
 |---|---|
-| `NVD_API_KEY` | [Free NVD key](https://nvd.nist.gov/developers/request-an-api-key): faster and more reliable NVD requests |
+| `NVD_API_KEY` | [Free NVD key](https://nvd.nist.gov/developers/request-an-api-key): faster and more reliable NVD requests. Paste the key shown after you open the activation link from the e-mail |
 | `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID` | Also send alerts to Telegram |
 | `NTFY_TOKEN` | Access token for a protected or self-hosted ntfy server |
 
@@ -56,7 +59,7 @@ On GitHub Actions the exploit search uses the built-in `GITHUB_TOKEN`; self-host
 
 ## Configuration
 
-Edit [`config.toml`](config.toml): CVSS threshold, vendor list, a `watch` list for software you run yourself (alerts start from CVSS 7), instant vs. digest alerts, digest time, your sites and ports, and status pages. Never put secrets there: they come from environment variables.
+Edit [`config.toml`](config.toml): CVSS threshold, vendor list, a `watch` list for software you run yourself (alerts start from CVSS 7), instant vs. digest alerts, digest time, news feeds and how many outlets make a story "big", your sites and ports, and status pages. Never put secrets there: they come from environment variables.
 
 ## Self-hosting
 

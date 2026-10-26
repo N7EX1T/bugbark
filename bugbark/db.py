@@ -40,6 +40,16 @@ CREATE TABLE IF NOT EXISTS monitors(
     extra TEXT DEFAULT '{}'
 );
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT);
+CREATE TABLE IF NOT EXISTS news(
+    id TEXT PRIMARY KEY,
+    source TEXT,
+    title TEXT,
+    link TEXT,
+    published TEXT,
+    summary TEXT,
+    alerted INTEGER DEFAULT 0,
+    first_seen TEXT
+);
 """
 
 JSON_COLS = {"data": {}, "reasons": [], "notified": [], "extra": {}, "poc": []}
@@ -158,6 +168,27 @@ class DB:
     def get_kev(self, cid):
         r = self.q("SELECT * FROM kev WHERE id=?", (cid,))
         return r[0] if r else None
+
+    # --- news ---
+    def add_news(self, items, seen_at):
+        """Stores headlines not seen before; returns how many were new."""
+        with self.lock, self.conn:
+            before = self.conn.total_changes
+            self.conn.executemany(
+                """INSERT OR IGNORE INTO news(id,source,title,link,published,summary,first_seen)
+                   VALUES(:id,:source,:title,:link,:published,:summary,:seen)""",
+                [dict(i, seen=seen_at) for i in items])
+            return self.conn.total_changes - before
+
+    def prune_news(self, before):
+        self.x("DELETE FROM news WHERE published < ?", (before,))
+
+    def news_alerted(self, ids):
+        marks = ",".join("?" * len(ids))
+        return bool(self.q(f"SELECT 1 FROM news WHERE alerted=1 AND id IN ({marks}) LIMIT 1", ids))
+
+    def set_news_alerted(self, ids):
+        self.xmany("UPDATE news SET alerted=1 WHERE id=?", [(i,) for i in ids])
 
     # --- monitors ---
     def get_monitor(self, key):

@@ -29,7 +29,7 @@ Barks when a bug bites: push notifications to your phone about **major new vulne
 
 Notifications go through [ntfy](https://ntfy.sh), a free push app for Android and iOS (Telegram works too). Tap one to open the details in the dashboard.
 
-### 🐞 Vulnerabilities
+### Vulnerabilities
 
 Every 15 minutes BugBark pulls fresh CVEs from the official [CVE list](https://www.cve.org) and [NVD](https://nvd.nist.gov), and alerts only on the ones that matter:
 
@@ -39,25 +39,25 @@ Every 15 minutes BugBark pulls fresh CVEs from the official [CVE list](https://w
 
 Each alert says in plain words what the risk is ("Remote, no login → full system takeover") and which version fixes it. A batch from one vendor arrives as one message. When **public exploit code** appears on GitHub for a CVE you already know about, you get a follow-up.
 
-### 🌍 What's happening in the world
+### What's happening in the world
 
 | | Alerts when | Source |
 |---|---|---|
-| 📰 **News** | 3+ outlets cover the same story | BleepingComputer, The Hacker News, SecurityWeek, The Record, Krebs and more |
-| 💧 **Data breaches** | 500K+ accounts leaked | [Have I Been Pwned](https://haveibeenpwned.com) |
-| 💀 **Ransomware** | a gang claims a large company | [ransomware.live](https://www.ransomware.live), sized by [Tranco](https://tranco-list.eu) |
-| ☣ **Malicious packages** | a popular npm / PyPI package ships malware | [OpenSSF malicious-packages](https://github.com/ossf/malicious-packages) |
-| 🌐 **Internet outages** | a whole country drops offline | [IODA](https://ioda.inetintel.cc.gatech.edu) |
+| **News** | 3+ outlets cover the same story | BleepingComputer, The Hacker News, SecurityWeek, The Record, Krebs and more |
+| **Data breaches** | 500K+ accounts leaked | [Have I Been Pwned](https://haveibeenpwned.com) |
+| **Ransomware** | a gang claims a large company | [ransomware.live](https://www.ransomware.live), sized by [Tranco](https://tranco-list.eu) |
+| **Malicious packages** | a popular npm / PyPI package ships malware | [OpenSSF malicious-packages](https://github.com/ossf/malicious-packages) |
+| **Internet outages** | a whole country drops offline | [IODA](https://ioda.inetintel.cc.gatech.edu) |
 
-### 🟢 Outages
+### Outages
 
 GitHub, Cloudflare, AWS, Azure, Google Cloud, Slack, Zoom, Discord, OpenAI, Claude, npm, Docker Hub, Atlassian, Vercel, DigitalOcean, Reddit, Dropbox, Twitch and Epic Games, plus your own websites and servers. One alert when something goes down, one when it recovers.
 
-### 🔗 Link checker
+### Link checker
 
 The Check tab tells you whether a link is safe to open. It compares it with ~40,000 known malware and phishing sites and looks for tricks: look-alike names (paypa1.com), fake "@" addresses, lookalike letters, shorteners. It runs on your phone, and the link is never sent anywhere. Install the dashboard as an app to share links to it from any app.
 
-### 🔕 Less noise
+### Less noise
 
 - **Daily digest** every morning and a **weekly report** on Mondays (also as charts in the Report tab).
 - **Quiet hours** 23:00–08:00: only exploited CVEs ring at night, the rest arrive as one "Overnight" summary.

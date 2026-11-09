@@ -69,6 +69,10 @@ jobs:
 
       - id: deploy
         uses: actions/deploy-pages@v5
+        env:
+          # Pages skips a deployment whose version (the commit) it already has, and the code rarely changes
+          # between runs, so give every run its own version
+          GITHUB_SHA: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Keep the schedule enabled
         env:

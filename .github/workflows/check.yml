@@ -56,7 +56,12 @@ jobs:
           git -c user.name="github-actions[bot]" \
               -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
               commit -qm "State $(date -u +%FT%TZ)"
-          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" state
+          # GitHub sometimes rejects a push with a transient server error: retry before failing the run
+          for i in 1 2 3; do
+            git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" state && exit 0
+            sleep 10
+          done
+          exit 1
 
       - uses: actions/upload-pages-artifact@v5
         with:

@@ -6,7 +6,7 @@ import re
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import util
+from . import report, util
 from .explain import explain
 from .exploits import exploit_refs
 from .util import log
@@ -86,6 +86,9 @@ class App:
         stories.sort(key=lambda s: (s["big"], len(s["sources"]) > 1, s["last"]), reverse=True)
         return {"items": stories[:150], "big": sum(1 for s in stories if s["big"]), "min_sources": min_sources}
 
+    def report(self):
+        return {"week": report.build(self.cfg, self.db, 7), "month": report.build(self.cfg, self.db, 30)}
+
     def monitors(self):
         rows = self.db.q("SELECT * FROM monitors ORDER BY kind, name")
         items = [{k: r[k] for k in ("kind", "name", "target", "up", "since", "latency", "detail", "last_check")}
@@ -95,7 +98,8 @@ class App:
 
     def health(self):
         jobs = {}
-        for name in ("nvd", "cveorg", "kev", "epss", "exploits", "news", "digest", "sites", "status"):
+        for name in ("nvd", "cveorg", "kev", "epss", "exploits", "news", "hibp", "ransomware", "outbox", "digest", "weekly",
+                     "sites", "status"):
             v = self.db.get_meta("job:" + name)
             if v:
                 jobs[name] = json.loads(v)
@@ -161,6 +165,8 @@ def make_handler(app):
                         return self._send(400, {"error": "invalid CVE ID"})
                     r = app.cve(cid)
                     return self._send(200, r) if r else self._send(404, {"error": "not found"})
+                if p == "/api/report":
+                    return self._send(200, app.report())
                 if p == "/api/news":
                     return self._send(200, app.news())
                 if p == "/api/monitors":

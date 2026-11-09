@@ -5,8 +5,9 @@ import urllib.error
 import urllib.parse
 from datetime import timedelta
 
-from . import cveorg, util
+from . import cveorg, report, util
 from .explain import explain
+from .breaches import Breaches
 from .news import News
 from .exploits import exploit_refs, github_pocs
 from .util import log
@@ -211,6 +212,7 @@ class Engine:
         self.vendors = Matcher(self.c["vendors"])
         self.watch = Matcher(self.c["watch"]) if self.c["watch"] else None
         self.news = News(cfg, db, notifier)
+        self.breaches = Breaches(cfg, db, notifier)
 
     # --- NVD ---
     def _nvd(self, params):
@@ -426,9 +428,10 @@ class Engine:
     # --- daily digest ---
     def run_digest(self):
         d = self.cfg["digest"]
-        now = util.now()
+        # hour_utc is the setting from older versions
+        now = util.now() if "hour_utc" in d else util.local_now(self.cfg)
         today = now.strftime("%Y-%m-%d")
-        if not d["enabled"] or now.hour < d["hour_utc"] or self.db.get_meta("digest_last") == today:
+        if not d["enabled"] or now.hour < d.get("hour_utc", d["hour"]) or self.db.get_meta("digest_last") == today:
             return
         if self.db.get_meta("nvd_last") is None:
             return
@@ -456,6 +459,22 @@ class Engine:
         self.notifier.send(f"📋 BugBark daily · {now.strftime('%b')} {now.day}", "\n".join(lines),
                            priority=3, click=util.panel_url(self.cfg))
         self.db.set_meta("digest_last", today)
+
+    # --- weekly report ---
+    def run_weekly(self):
+        """Monday, at the digest hour: the past week in numbers."""
+        d = self.cfg["digest"]
+        local = util.local_now(self.cfg)
+        week = local.strftime("%G-W%V")
+        if not d["weekly"] or local.weekday() != 0 or local.hour < d["hour"] or self.db.get_meta("weekly_last") == week:
+            return
+        r = report.build(self.cfg, self.db, 7, end=util.now() - timedelta(days=1))
+        first, last = util.parse_ts(r["from"]), util.parse_ts(r["to"])
+        span = f"{first.strftime('%b')} {first.day}–{last.day}" if first.month == last.month else \
+            f"{first.strftime('%b')} {first.day} – {last.strftime('%b')} {last.day}"
+        self.notifier.send(f"📊 BugBark weekly · {span}", report.weekly_message(r), priority=3,
+                           click=util.panel_url(self.cfg, "report"))
+        self.db.set_meta("weekly_last", week)
 
     # --- assessment and notifications ---
     def assess(self, row):

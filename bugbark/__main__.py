@@ -20,7 +20,8 @@ from .web import serve
 
 JOB_NAMES = {
     "nvd": "NVD (new CVEs)", "cveorg": "CVE.org (new CVEs)", "kev": "CISA KEV", "epss": "EPSS", "exploits": "exploit search",
-    "news": "security news", "digest": "daily digest", "sites": "site checks", "status": "status pages",
+    "news": "security news", "hibp": "data breaches (HIBP)", "ransomware": "ransomware victims", "outbox": "quiet hours", "digest": "daily digest",
+    "weekly": "weekly report", "sites": "site checks", "status": "status pages",
 }
 ALERT_AFTER = 3600  # a check must keep failing this long before BugBark warns about itself
 
@@ -105,7 +106,7 @@ def main():
         cfg["web"]["public_url"] = f"http://{util.lan_ip()}:{cfg['web']['port']}"
 
     db = DB(os.path.join(args.data, "bugbark.db"))
-    notifier = Notifier(cfg)
+    notifier = Notifier(cfg, db)
     engine = Engine(cfg, db, notifier)
     monitor = Monitor(cfg, db, notifier)
     health = Health(cfg, notifier)
@@ -128,7 +129,11 @@ def main():
         Job("epss", 6 * 3600, engine.run_epss),
         Job("exploits", 1800, engine.run_exploits),
         Job("news", cfg["news"]["interval_seconds"], engine.news.run),
-        Job("digest", 600, engine.run_digest),  # sends once a day, at [digest] hour_utc
+        Job("hibp", cfg["breaches"]["interval_seconds"], engine.breaches.run_hibp),
+        Job("ransomware", cfg["ransomware"]["interval_seconds"], engine.breaches.run_ransomware),
+        Job("outbox", 60, notifier.flush_held),  # alerts held during quiet hours
+        Job("digest", 600, engine.run_digest),  # sends once a day, at [digest] hour
+        Job("weekly", 600, engine.run_weekly),  # Mondays, at the same hour
     ]
     monitors = [
         Job("sites", cfg["monitor"]["interval_seconds"], monitor.run_checks),

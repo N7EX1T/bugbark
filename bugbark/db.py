@@ -40,6 +40,29 @@ CREATE TABLE IF NOT EXISTS monitors(
     extra TEXT DEFAULT '{}'
 );
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT);
+CREATE TABLE IF NOT EXISTS outbox(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created TEXT,
+    title TEXT,
+    message TEXT,
+    priority INTEGER,
+    click TEXT,
+    actions TEXT
+);
+CREATE TABLE IF NOT EXISTS breaches(
+    name TEXT PRIMARY KEY,
+    added TEXT,
+    count INTEGER,
+    data TEXT
+);
+CREATE TABLE IF NOT EXISTS victims(
+    id TEXT PRIMARY KEY,
+    discovered TEXT,
+    grp TEXT,
+    rank INTEGER,
+    data TEXT
+);
+CREATE TABLE IF NOT EXISTS toplist(domain TEXT PRIMARY KEY, rank INTEGER) WITHOUT ROWID;
 CREATE TABLE IF NOT EXISTS news(
     id TEXT PRIMARY KEY,
     source TEXT,
@@ -189,6 +212,50 @@ class DB:
 
     def set_news_alerted(self, ids):
         self.xmany("UPDATE news SET alerted=1 WHERE id=?", [(i,) for i in ids])
+
+    # --- breaches and ransomware ---
+    def add_breach(self, b):
+        self.x("INSERT OR REPLACE INTO breaches(name,added,count,data) VALUES(?,?,?,?)",
+               (b["name"], b["added"], b["count"], json.dumps(b, ensure_ascii=False)))
+
+    def prune_breaches(self, before):
+        self.x("DELETE FROM breaches WHERE added < ?", (before,))
+
+    def add_victim(self, v):
+        """Stores a ransomware victim; returns False if it was already known."""
+        with self.lock, self.conn:
+            cur = self.conn.execute("INSERT OR IGNORE INTO victims(id,discovered,grp,rank,data) VALUES(?,?,?,?,?)",
+                                    (v["id"], v["discovered"], v["grp"], v["rank"], json.dumps(v, ensure_ascii=False)))
+            return cur.rowcount > 0
+
+    def prune_victims(self, before):
+        self.x("DELETE FROM victims WHERE discovered < ?", (before,))
+
+    def set_toplist(self, rows):
+        with self.lock, self.conn:
+            self.conn.execute("DELETE FROM toplist")
+            self.conn.executemany("INSERT OR IGNORE INTO toplist(domain,rank) VALUES(?,?)", rows)
+
+    def site_rank(self, site):
+        """Rank of a site or of its registered domain (shop.example.com -> example.com)."""
+        parts = site.split(".")
+        names = [".".join(parts[i:]) for i in range(len(parts) - 1)]
+        r = self.q(f"SELECT MIN(rank) r FROM toplist WHERE domain IN ({','.join('?' * len(names))})", names)
+        return r[0]["r"] if r else None
+
+    # --- notifications held during quiet hours ---
+    def hold(self, title, message, priority, click, actions, created):
+        self.x("INSERT INTO outbox(created,title,message,priority,click,actions) VALUES(?,?,?,?,?,?)",
+               (created, title, message, priority, click, json.dumps(actions or [])))
+
+    def held(self):
+        rows = self.q("SELECT * FROM outbox ORDER BY id")
+        for r in rows:
+            r["actions"] = [tuple(a) for a in json.loads(r["actions"] or "[]")]
+        return rows
+
+    def clear_held(self, last_id):
+        self.x("DELETE FROM outbox WHERE id <= ?", (last_id,))
 
     # --- monitors ---
     def get_monitor(self, key):

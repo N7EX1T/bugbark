@@ -14,6 +14,17 @@ def now():
     return datetime.now(timezone.utc)
 
 
+def local_now(cfg):
+    """Current time in the configured timezone (UTC if it is unknown)."""
+    from zoneinfo import ZoneInfo
+    name = cfg["time"]["timezone"] or "UTC"
+    try:
+        return now().astimezone(ZoneInfo(name))
+    except Exception:
+        log.warning("Unknown timezone %r, using UTC", name)
+        return now()
+
+
 def iso(dt):
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 

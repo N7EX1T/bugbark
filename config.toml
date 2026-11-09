@@ -3,7 +3,7 @@
 # Never put secrets in this file: the repository is public.
 # Secrets come from environment variables (GitHub Actions secrets, or a .env file for Docker):
 #   NTFY_TOPIC, NTFY_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, NVD_API_KEY,
-#   BUGBARK_PUBLIC_URL, BUGBARK_WEB_TOKEN
+#   BUGBARK_PUBLIC_URL, BUGBARK_WEB_TOKEN, BUGBARK_TIMEZONE
 
 [notify]
 # Push notifications via ntfy (free app for Android and iOS).
@@ -65,10 +65,36 @@ vendors = [
     "Synology", "QNAP", "Samsung", "Qualcomm", "Intel", "AMD", "NVIDIA",
 ]
 
-[digest]
-# One summary per day: major CVEs of the last 24h, top threats, and what is down
+[breaches]
+# New data breaches from Have I Been Pwned with at least this many accounts
 enabled = true
-hour_utc = 6               # 06:00 UTC = 09:00 in UTC+3
+min_accounts = 500000
+
+[ransomware]
+# Victims that ransomware gangs post on their leak sites (via ransomware.live).
+# Alerts only when the victim's website is among the world's top max_rank sites (a rough sign of a big company);
+# all victims are counted in the weekly report.
+enabled = true
+max_rank = 100000
+
+[time]
+# Your timezone for the digest and quiet hours, e.g. "Europe/Berlin", "America/New_York".
+# On GitHub Actions, set it as the BUGBARK_TIMEZONE secret instead: this file is public.
+timezone = "UTC"
+
+[digest]
+# One summary per day: major CVEs of the last 24h, top threats, news, and what is down
+enabled = true
+hour = 9                   # local time
+weekly = true              # on Mondays, also a weekly report: CVEs, ransomware, breaches, top stories
+
+[quiet]
+# Quiet hours (local time): only actively exploited CVEs (priority 5) ring at night.
+# Everything else waits and arrives as one "Overnight" summary when quiet hours end.
+enabled = true
+start = 23
+end = 8
+min_priority = 5
 
 [news]
 # Security news from major outlets. Headlines about the same event are grouped into one story;
@@ -109,7 +135,7 @@ timeout_seconds = 10
 [status_pages]
 interval_seconds = 300
 
-# Public status pages (Atlassian Statuspage format: <url>/api/v2/summary.json)
+# Public status pages (Atlassian Statuspage format: <url>/api/v2/summary.json, plus AWS, Azure, Google Cloud and Slack)
 [status_pages.pages]
 GitHub = "https://www.githubstatus.com"
 Cloudflare = "https://www.cloudflarestatus.com"
@@ -119,3 +145,15 @@ Claude = "https://status.claude.com"
 npm = "https://status.npmjs.org"
 Reddit = "https://www.redditstatus.com"
 Dropbox = "https://status.dropbox.com"
+# These four have their own formats, which BugBark understands too
+AWS = "https://health.aws.amazon.com/health/status"
+Azure = "https://azure.status.microsoft/en-us/status"
+"Google Cloud" = "https://status.cloud.google.com"
+Slack = "https://slack-status.com"
+Zoom = "https://www.zoomstatus.com"
+"Docker Hub" = "https://www.dockerstatus.com"
+Atlassian = "https://status.atlassian.com"
+Vercel = "https://www.vercel-status.com"
+DigitalOcean = "https://status.digitalocean.com"
+Twitch = "https://status.twitch.com"
+"Epic Games" = "https://status.epicgames.com"

@@ -3,8 +3,11 @@ import socket
 import ssl
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
+from datetime import timedelta
 
 from . import util
 from .util import log
@@ -18,6 +21,73 @@ INDICATOR_TEXT = {
     "maintenance": "Scheduled maintenance",
 }
 
+
+
+def statuspage(base):
+    """Atlassian Statuspage, used by most services (GitHub, Cloudflare, Zoom, ...)."""
+    d = util.http_json(base.rstrip("/") + "/api/v2/summary.json", timeout=20, retries=2)
+    indicator = d.get("status", {}).get("indicator", "none")
+    incidents = [{"name": i.get("name", ""), "status": i.get("status", ""),
+                  "impact": i.get("impact", ""), "url": i.get("shortlink") or ""}
+                 for i in d.get("incidents", []) if i.get("status") not in ("resolved", "postmortem")]
+    components = [c["name"] for c in d.get("components", [])
+                  if not c.get("group") and c.get("status") in ("degraded_performance", "partial_outage",
+                                                                "major_outage")]
+    return {"indicator": indicator, "incidents": incidents, "components": components}
+
+
+def slack_status(base):
+    d = util.http_json("https://slack-status.com/api/v2.0.0/current", timeout=20, retries=2)
+    # "notice" entries are announcements, not problems
+    active = [i for i in d.get("active_incidents", []) if i.get("type") != "notice"]
+    incidents = [{"name": i.get("title", ""), "status": i.get("status", ""), "impact": i.get("type", ""),
+                  "url": i.get("url") or ""} for i in active]
+    indicator = "major" if any(i.get("type") == "outage" for i in active) else "minor" if active else "none"
+    return {"indicator": indicator, "incidents": incidents,
+            "components": list(dict.fromkeys(s for i in active for s in i.get("services", [])))}
+
+
+def google_cloud_status(base):
+    d = util.http_json("https://status.cloud.google.com/incidents.json", timeout=30, retries=2)
+    active = [i for i in d if not i.get("end")]
+    incidents = [{"name": util.shorten(i.get("external_desc", ""), 140), "status": "ongoing",
+                  "impact": i.get("severity", ""), "url": "https://status.cloud.google.com/" + i.get("uri", "")}
+                 for i in active]
+    indicator = "major" if any(i.get("severity") == "high" for i in active) else "minor" if active else "none"
+    return {"indicator": indicator, "incidents": incidents,
+            "components": list(dict.fromkeys(p["title"] for i in active for p in i.get("affected_products", [])))}
+
+
+def aws_status(base):
+    # The feed is UTF-16 JSON; json.loads detects that from the bytes
+    d = util.http_json("https://health.aws.amazon.com/public/currentevents", timeout=30, retries=2) or []
+    # Some regional events stay open for months (a destroyed data center): only recent ones count as an outage
+    recent = (util.now() - timedelta(days=14)).timestamp()
+    active = [e for e in d if e.get("status") in ("2", "3") and float(e.get("date") or 0) >= recent]
+    incidents = [{"name": f"{e.get('service_name', '')} ({e.get('region_name', '')}): {e.get('summary', '')}",
+                  "status": "ongoing", "impact": e.get("status"), "url": base} for e in active]
+    indicator = "major" if any(e["status"] == "3" for e in active) else "minor" if active else "none"
+    return {"indicator": indicator, "incidents": incidents,
+            "components": list(dict.fromkeys(e.get("region_name", "") for e in active))}
+
+
+def azure_status(base):
+    req = urllib.request.Request("https://azure.status.microsoft/en-us/status/feed/", headers={"User-Agent": util.UA})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        root = ET.fromstring(r.read())
+    # The feed only lists active incidents
+    incidents = [{"name": i.findtext("title") or "", "status": "ongoing", "impact": "",
+                  "url": i.findtext("link") or ""} for i in root.iter("item")]
+    return {"indicator": "major" if incidents else "none", "incidents": incidents, "components": []}
+
+
+# Services with their own status format, by status page host
+CUSTOM_PAGES = {
+    "slack-status.com": slack_status,
+    "status.cloud.google.com": google_cloud_status,
+    "health.aws.amazon.com": aws_status,
+    "azure.status.microsoft": azure_status,
+}
 
 def error_text(e, timeout):
     if isinstance(e, urllib.error.URLError) and not isinstance(e, urllib.error.HTTPError):
@@ -142,18 +212,11 @@ class Monitor:
             self._update_page(name, base, res)
 
     def _fetch_page(self, base):
+        fetch = CUSTOM_PAGES.get(urllib.parse.urlsplit(base).hostname or "", statuspage)
         try:
-            d = util.http_json(base.rstrip("/") + "/api/v2/summary.json", timeout=20, retries=2)
+            return fetch(base)
         except Exception as e:
             return {"error": error_text(e, 20)}
-        indicator = d.get("status", {}).get("indicator", "none")
-        incidents = [{"name": i.get("name", ""), "status": i.get("status", ""),
-                      "impact": i.get("impact", ""), "url": i.get("shortlink") or ""}
-                     for i in d.get("incidents", []) if i.get("status") not in ("resolved", "postmortem")]
-        components = [c["name"] for c in d.get("components", [])
-                      if not c.get("group") and c.get("status") in ("degraded_performance", "partial_outage",
-                                                                    "major_outage")]
-        return {"indicator": indicator, "incidents": incidents, "components": components}
 
     def _update_page(self, name, base, res):
         key = f"status:{name}"

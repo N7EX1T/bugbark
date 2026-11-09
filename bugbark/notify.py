@@ -3,12 +3,15 @@ import json
 import urllib.error
 import urllib.request
 
+from . import util
 from .util import UA, log
 
 
 class Notifier:
-    def __init__(self, cfg):
+    def __init__(self, cfg, db=None):
+        self.cfg, self.db = cfg, db
         self.c = cfg["notify"]
+        self.quiet = cfg["quiet"]
 
     @property
     def ntfy(self):
@@ -22,8 +25,41 @@ class Notifier:
     def enabled(self):
         return self.ntfy or self.telegram
 
+    def is_quiet(self):
+        q = self.quiet
+        if not q["enabled"] or q["start"] == q["end"]:
+            return False
+        h = util.local_now(self.cfg).hour
+        return q["start"] <= h < q["end"] if q["start"] < q["end"] else h >= q["start"] or h < q["end"]
+
     def send(self, title, message, priority=3, click=None, actions=None):
         """actions: list of (label, url) buttons shown under the notification."""
+        if self.db is not None and priority < self.quiet["min_priority"] and self.is_quiet():
+            log.info("Notification held for quiet hours: %s", title)
+            self.db.hold(title, message, priority, click, actions, util.iso(util.now()))
+            return True
+        return self._deliver(title, message, priority, click, actions)
+
+    def flush_held(self):
+        """After quiet hours: one held alert goes out as it was, several as a single summary."""
+        if self.is_quiet():
+            return
+        held = self.db.held()
+        if not held:
+            return
+        if len(held) == 1:
+            h = held[0]
+            self._deliver(h["title"], h["message"], h["priority"], h["click"], h["actions"])
+        else:
+            lines = ["• " + h["title"] for h in held[:12]]
+            if len(held) > 12:
+                lines.append(f"…and {len(held) - 12} more")
+            panel = util.panel_url(self.cfg)
+            self._deliver(f"🌙 Overnight: {len(held)} alerts", "\n".join(lines),
+                          max(h["priority"] for h in held), panel, [("Open dashboard", panel)] if panel else None)
+        self.db.clear_held(held[-1]["id"])
+
+    def _deliver(self, title, message, priority=3, click=None, actions=None):
         log.info("Notification: %s", title)
         if not self.enabled:
             log.warning("No notification channel configured, logged only")

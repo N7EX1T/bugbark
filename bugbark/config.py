@@ -46,7 +46,12 @@ DEFAULTS = {
         "poc_search": True,
         "github_token": "",
     },
-    "digest": {"enabled": True, "hour_utc": 6},
+    # Local time for the digest and quiet hours, e.g. "Europe/Berlin" (or the BUGBARK_TIMEZONE variable)
+    "time": {"timezone": "UTC"},
+    "digest": {"enabled": True, "hour": 9, "weekly": True},
+    # At night only the most urgent alerts (actively exploited CVEs, priority 5) ring;
+    # the rest wait and arrive as one summary when quiet hours end
+    "quiet": {"enabled": True, "start": 23, "end": 8, "min_priority": 5},
     "news": {
         "enabled": True,
         # A story is "big" when this many outlets cover it within two days
@@ -65,6 +70,11 @@ DEFAULTS = {
             "Infosecurity Magazine": "https://www.infosecurity-magazine.com/rss/news/",
         },
     },
+    # New breaches in Have I Been Pwned with at least this many accounts
+    "breaches": {"enabled": True, "min_accounts": 500000, "interval_seconds": 3600},
+    # Ransomware gangs' victims (ransomware.live); alert when the victim's website is among the world's
+    # top max_rank sites (Tranco list), a rough sign of a large company
+    "ransomware": {"enabled": True, "max_rank": 100000, "interval_seconds": 1800},
     "monitor": {
         "interval_seconds": 60,
         "fail_threshold": 2,
@@ -83,6 +93,17 @@ DEFAULTS = {
             "npm": "https://status.npmjs.org",
             "Reddit": "https://www.redditstatus.com",
             "Dropbox": "https://status.dropbox.com",
+            "AWS": "https://health.aws.amazon.com/health/status",
+            "Azure": "https://azure.status.microsoft/en-us/status",
+            "Google Cloud": "https://status.cloud.google.com",
+            "Slack": "https://slack-status.com",
+            "Zoom": "https://www.zoomstatus.com",
+            "Docker Hub": "https://www.dockerstatus.com",
+            "Atlassian": "https://status.atlassian.com",
+            "Vercel": "https://www.vercel-status.com",
+            "DigitalOcean": "https://status.digitalocean.com",
+            "Twitch": "https://status.twitch.com",
+            "Epic Games": "https://status.epicgames.com",
         },
     },
 }
@@ -108,6 +129,7 @@ ENV_OVERRIDES = {
     "GITHUB_TOKEN": ("cve", "github_token"),
     "BUGBARK_PUBLIC_URL": ("web", "public_url"),
     "BUGBARK_WEB_TOKEN": ("web", "token"),
+    "BUGBARK_TIMEZONE": ("time", "timezone"),
 }
 
 

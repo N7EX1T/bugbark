@@ -23,6 +23,7 @@
   --crit: #ff3860; --crit-d: rgba(255, 56, 96, .14);
   --high: #ff9f1a; --high-d: rgba(255, 159, 26, .13);
   --med: #f5d90a; --ok: #3dff9a; --ok-d: rgba(61, 255, 154, .10);
+  --series: #6aa31c;
   --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --sans: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
@@ -190,6 +191,44 @@ main { padding: 0 16px calc(96px + env(safe-area-inset-bottom)); max-width: 760p
 .hl .meta { font-size: 11px; }
 .hl div:last-child { font: 500 14px/1.35 var(--sans); margin-top: 4px; }
 
+/* report */
+.range { display: flex; gap: 6px; margin: 12px 0 0; }
+.range button { flex: none; padding: 8px 12px; border: 1px solid var(--line2); background: var(--panel); color: var(--muted);
+  font: 800 11px/1 var(--mono); letter-spacing: .1em; cursor: pointer; border-radius: 0; }
+.range button.on { color: var(--acid); border-color: var(--acid); background: var(--acid-d); }
+.kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line2); border: 1px solid var(--line2); margin-top: 12px; }
+.kpis .tile b { font-size: 22px; }
+#report { transition: opacity .2s; }
+.chart { border: 1px solid var(--line); background: var(--panel); padding: 12px 14px 10px; margin-top: 8px; }
+.chart h3 { margin: 0 0 2px; font: 600 11px/1.3 var(--mono); letter-spacing: .12em; color: var(--acid); text-transform: uppercase; }
+.chart h3::before { content: "// "; color: var(--dim); }
+.chart .sub { font: 11px/1.4 var(--mono); color: var(--muted); margin-bottom: 8px; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart svg text { font: 10px var(--mono); fill: var(--muted); font-variant-numeric: tabular-nums; }
+.chart svg .grid { stroke: var(--line); stroke-width: 1; }
+.chart svg .bar { fill: var(--series); }
+.chart svg .hit { fill: transparent; cursor: default; outline: none; }
+.chart svg .hit:hover + .bar, .chart svg .hit:focus + .bar { fill: var(--acid); }
+.chart details { margin-top: 6px; font: 11px/1.4 var(--mono); color: var(--muted); }
+.chart summary { cursor: pointer; letter-spacing: .08em; }
+.chart table { width: 100%; border-collapse: collapse; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.chart td { padding: 3px 0; border-top: 1px solid var(--line); }
+.chart td:last-child { text-align: right; color: var(--text); }
+.rank { display: grid; grid-template-columns: minmax(0, 38%) 1fr; align-items: center; gap: 4px 10px; }
+.rank .nm { font: 600 13px/1.3 var(--sans); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank .tr { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.rank .br { height: 10px; background: var(--series); border-radius: 0 4px 4px 0; min-width: 2px; outline: none; }
+.rank .br:hover, .rank .br:focus { background: var(--acid); }
+.rank .vl { font: 600 11px/1 var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
+.tip { position: fixed; z-index: 9; pointer-events: none; padding: 6px 9px; background: #000; border: 1px solid var(--line2);
+  font: 11px/1.35 var(--mono); color: var(--muted); white-space: nowrap; }
+.tip b { display: block; color: var(--text); font-size: 13px; }
+.item { padding: 9px 0; border-top: 1px dashed var(--line); }
+.item:first-of-type { border-top: 0; }
+.item .t { font: 600 14px/1.3 var(--sans); }
+.item .d { font: 11.5px/1.45 var(--mono); color: var(--muted); margin-top: 2px; }
+.item a.t:hover { text-decoration: underline; text-decoration-color: var(--line2); text-underline-offset: 3px; }
+
 nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: rgba(7, 9, 12, .92); backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--line2); padding-bottom: env(safe-area-inset-bottom); z-index: 6; }
 nav a { flex: 1; text-align: center; padding: 11px 0 12px; font: 700 10px/1 var(--mono); letter-spacing: .14em; color: var(--muted);
@@ -207,6 +246,7 @@ nav svg { display: block; margin: 0 auto 6px; width: 22px; height: 22px; }
 <nav>
   <a href="#/" id="nav-cves"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M12 3l8 3v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="M12 8v5M12 16v1"/></svg>Threats<span class="badge" id="b-cves" hidden></span></a>
   <a href="#/news" id="nav-news"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v8a2 2 0 0 1-2 2"/><path d="M8 9h5M8 13h5"/></svg>News</a>
+  <a href="#/report" id="nav-report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M4 20h16"/><path d="M7 16v-5M12 16V6M17 16v-8"/></svg>Report</a>
   <a href="#/status" id="nav-status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Uptime<span class="badge" id="b-status" hidden></span></a>
 </nav>
 <script>
@@ -247,11 +287,13 @@ const data = {
   },
   monitors: () => api(STATIC ? "api/monitors.json" : "api/monitors"),
   news: () => api(STATIC ? "api/news.json" : "api/news"),
+  report: () => api(STATIC ? "api/report.json" : "api/report"),
   health: () => api(STATIC ? "api/health.json" : "api/health"),
 };
 const state = { view: "important", q: "" };
 const SEV_SHORT = { CRITICAL: "CRIT", HIGH: "HIGH", MEDIUM: "MED", LOW: "LOW" };
-const JOB = { nvd: "NVD", cveorg: "CVE.ORG", kev: "KEV", epss: "EPSS", exploits: "POC", news: "NEWS", digest: "DIGEST", sites: "SITES", status: "STATUS" };
+const JOB = { nvd: "NVD", cveorg: "CVE.ORG", kev: "KEV", epss: "EPSS", exploits: "POC", news: "NEWS", hibp: "HIBP", ransomware: "RANSOM",
+  outbox: "QUIET", digest: "DIGEST", weekly: "WEEKLY", sites: "SITES", status: "STATUS" };
 
 function rel(ts) {
   if (!ts) return "";
@@ -273,6 +315,7 @@ function setBadge(id, n) { const b = $(id); b.hidden = !n; b.textContent = n > 9
 function nav(tab) {
   $("#nav-cves").classList.toggle("on", tab === "cves");
   $("#nav-news").classList.toggle("on", tab === "news");
+  $("#nav-report").classList.toggle("on", tab === "report");
   $("#nav-status").classList.toggle("on", tab === "status");
 }
 // "Remote, no login → full system takeover": highlight the outcome
@@ -459,6 +502,97 @@ async function showNews() {
     <div class="mon">${rest.map(headline).join("") || `<div class="empty">no data yet</div>`}</div>`;
 }
 
+/* ---------- report ---------- */
+let reportRange = "week";
+const compact = n => n >= 1e9 ? +(n / 1e9).toFixed(1) + "B" : n >= 1e6 ? +(n / 1e6).toFixed(1) + "M" : n >= 1e4 ? Math.round(n / 1e3) + "K" : n.toLocaleString("en-US");
+const dayLabel = d => new Date(d + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+function niceMax(v) {
+  if (v <= 4) return 4;
+  const p = 10 ** Math.floor(Math.log10(v)), m = v / p;
+  return (m <= 2 ? 2 : m <= 5 ? 5 : 10) * p;
+}
+// Daily columns: one series, value in the tooltip and the table, only the peak labeled on the chart
+function columns(rows, unit) {
+  const W = 340, H = 120, L = 26, B = 18, T = 12, n = rows.length;
+  const max = niceMax(Math.max(1, ...rows.map(r => r.n))), slot = (W - L) / n, bw = Math.min(24, slot - 2);
+  const y = v => T + (H - T - B) * (1 - v / max), base = y(0);
+  const peak = rows.reduce((a, r, i) => r.n > rows[a].n ? i : a, 0);
+  const ticks = [0, max / 2, max].map(v => `<line class="grid" x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/>
+    <text x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${compact(v)}</text>`).join("");
+  const bars = rows.map((r, i) => {
+    const x = L + i * slot + (slot - bw) / 2, top = y(r.n), h = base - top, rad = Math.min(4, h, bw / 2);
+    const path = h <= 0 ? "" : `M${x},${base}V${top + rad}Q${x},${top} ${x + rad},${top}H${x + bw - rad}Q${x + bw},${top} ${x + bw},${top + rad}V${base}Z`;
+    return `<rect class="hit" x="${L + i * slot}" y="${T}" width="${slot}" height="${H - T - B}" tabindex="0"
+        data-tip="${r.n.toLocaleString("en-US")}|${unit} · ${dayLabel(r.day)}" aria-label="${dayLabel(r.day)}: ${r.n} ${unit}"></rect>
+      <path class="bar" d="${path}"/>${i === peak && r.n ? `<text x="${x + bw / 2}" y="${top - 4}" text-anchor="middle" style="fill:var(--text)">${r.n}</text>` : ""}`;
+  }).join("");
+  const xl = [0, Math.floor((n - 1) / 2), n - 1].map(i => `<text x="${L + i * slot + slot / 2}" y="${H - 4}" text-anchor="middle">${dayLabel(rows[i].day)}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${unit} per day">${ticks}${bars}${xl}</svg>
+    <details><summary>TABLE</summary><table>${rows.map(r => `<tr><td>${dayLabel(r.day)}</td><td>${r.n}</td></tr>`).join("")}</table></details>`;
+}
+// Ranked bars: names on the left, value at the bar tip
+function ranked(rows, unit) {
+  if (!rows.length) return `<div class="sub">No data yet.</div>`;
+  const max = Math.max(...rows.map(r => r.n));
+  return `<div class="rank">${rows.map(r => `<div class="nm">${esc(r.name)}</div>
+    <div class="tr"><span class="br" style="width:${Math.max(1, r.n / max * 82)}%" tabindex="0" data-tip="${r.n}|${esc(unit)} · ${esc(r.name)}"></span><span class="vl">${r.n}</span></div>`).join("")}</div>`;
+}
+function bindTips() {
+  let tip = $(".tip");
+  if (!tip) { tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; document.body.append(tip); }
+  const show = (el, x, y) => {
+    const [v, l] = el.dataset.tip.split("|");
+    tip.replaceChildren(Object.assign(document.createElement("b"), { textContent: v }), document.createTextNode(l));
+    tip.hidden = false;
+    tip.style.left = Math.min(x + 12, innerWidth - tip.offsetWidth - 8) + "px";
+    tip.style.top = (y - tip.offsetHeight - 10) + "px";
+  };
+  document.querySelectorAll("[data-tip]").forEach(el => {
+    el.onpointermove = e => show(el, e.clientX, e.clientY);
+    el.onpointerleave = el.onblur = () => { tip.hidden = true; };
+    el.onfocus = () => { const b = el.getBoundingClientRect(); show(el, b.left + b.width / 2, b.top); };
+  });
+}
+let reportData = null;
+async function showReport() {
+  nav("report");
+  renderHeader();
+  const box = $("#report");
+  if (box) box.style.opacity = .5;  // refetch keeps the frame
+  const [d, h] = await Promise.all([data.report(), data.health()]);
+  health = h;
+  reportData = d;
+  renderHeader();
+  renderReport();
+}
+function renderReport() {
+  const r = reportData[reportRange], t = r.totals;
+  const tile = (v, l) => `<div class="tile"><b>${v}</b><span>${l}</span></div>`;
+  const breach = b => `<div class="item"><div class="t">${esc(b.title)} · ${compact(b.count)}</div>
+    <div class="d">${esc(b.data_classes.slice(0, 5).join(", "))}${b.data_classes.length > 5 ? ` +${b.data_classes.length - 5}` : ""} · added ${rel(b.added)}</div></div>`;
+  const victim = v => `<div class="item">${safeUrl(v.url) ? `<a class="t" href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.victim)}</a>` : `<div class="t">${esc(v.victim)}</div>`}
+    <div class="d">${esc([v.grp, v.country, v.sector].filter(Boolean).join(" · "))} · top ${Number(v.rank).toLocaleString("en-US")} site · ${rel(v.discovered)}</div></div>`;
+  const story = s => `<div class="item">${safeUrl(s.link) ? `<a class="t" href="${esc(s.link)}" target="_blank" rel="noopener">${esc(s.title)}</a>` : `<div class="t">${esc(s.title)}</div>`}
+    <div class="d">${s.sources} outlets</div></div>`;
+  $("#app").innerHTML = `
+    <div class="range">${[["week", "7 DAYS"], ["month", "30 DAYS"]].map(([k, l]) => `<button data-r="${k}" class="${k === reportRange ? "on" : ""}">${l}</button>`).join("")}</div>
+    <div id="report">
+    <div class="kpis">
+      ${tile(t.major, "Major CVEs")}${tile(t.exploited, "Newly exploited")}${tile(t.poc, "Public exploit")}
+      ${tile(t.victims, "Ransomware claims")}${tile(t.breaches, "Data breaches")}${tile(compact(t.accounts), "Accounts leaked")}
+    </div>
+    <div class="chart"><h3>Major vulnerabilities per day</h3><div class="sub">${dayLabel(r.from)} – ${dayLabel(r.to)} · by publication date</div>${columns(r.major_per_day, "major CVEs")}</div>
+    <div class="chart"><h3>Top vendors</h3><div class="sub">major CVEs</div>${ranked(r.top_vendors, "major CVEs")}</div>
+    <div class="chart"><h3>Ransomware claims per day</h3><div class="sub">victims posted on gangs' leak sites (ransomware.live)</div>${columns(r.victims_per_day, "victims")}</div>
+    <div class="chart"><h3>Most active gangs</h3><div class="sub">claimed victims</div>${ranked(r.top_groups, "victims")}</div>
+    <div class="chart"><h3>Notable ransomware victims</h3><div class="sub">company website among the world's top sites</div>${r.notable_victims.map(victim).join("") || `<div class="sub">None in this period.</div>`}</div>
+    <div class="chart"><h3>Data breaches</h3><div class="sub">added to Have I Been Pwned</div>${r.breaches.map(breach).join("") || `<div class="sub">None in this period.</div>`}</div>
+    <div class="chart"><h3>Biggest stories</h3><div class="sub">covered by the most outlets</div>${r.stories.map(story).join("") || `<div class="sub">No big stories.</div>`}</div>
+    </div>`;
+  document.querySelectorAll(".range button").forEach(b => b.onclick = () => { reportRange = b.dataset.r; renderReport(); });
+  bindTips();
+}
+
 /* ---------- uptime ---------- */
 async function showStatus() {
   nav("status");
@@ -492,7 +626,7 @@ async function showStatus() {
 function route() {
   const h = location.hash;
   if (h.startsWith("#/q/")) { state.view = "important"; state.q = decodeURIComponent(h.slice(4)); }
-  const p = h.startsWith("#/cve/") ? showDetail(h.slice(6)) : h === "#/status" ? showStatus() : h === "#/news" ? showNews() : showList();
+  const p = h.startsWith("#/cve/") ? showDetail(h.slice(6)) : h === "#/status" ? showStatus() : h === "#/news" ? showNews() : h === "#/report" ? showReport() : showList();
   p.catch(e => { $("#app").innerHTML = `<div class="empty">NO SIGNAL: ${esc(e.message)}</div>`; });
 }
 window.addEventListener("hashchange", route);
@@ -502,6 +636,7 @@ setInterval(() => {
   const h = location.hash;
   if (h === "#/status") showStatus().catch(() => {});
   else if (h === "#/news") showNews().catch(() => {});
+  else if (h === "#/report") showReport().catch(() => {});
   else if (!h.startsWith("#/cve/") && document.activeElement?.id !== "q") loadList().catch(() => {});
 }, 60000);
 </script>

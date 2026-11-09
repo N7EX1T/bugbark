@@ -62,6 +62,16 @@ CREATE TABLE IF NOT EXISTS victims(
     rank INTEGER,
     data TEXT
 );
+CREATE TABLE IF NOT EXISTS packages(
+    id TEXT,
+    ecosystem TEXT,
+    name TEXT,
+    published TEXT,
+    downloads INTEGER,
+    data TEXT,
+    PRIMARY KEY (id, ecosystem, name)
+);
+CREATE TABLE IF NOT EXISTS blocklist(entry TEXT PRIMARY KEY, source TEXT) WITHOUT ROWID;
 CREATE TABLE IF NOT EXISTS toplist(domain TEXT PRIMARY KEY, rank INTEGER) WITHOUT ROWID;
 CREATE TABLE IF NOT EXISTS news(
     id TEXT PRIMARY KEY,
@@ -81,6 +91,7 @@ JSON_COLS = {"data": {}, "reasons": [], "notified": [], "extra": {}, "poc": []}
 MIGRATIONS = [
     ("cves", "poc", "TEXT DEFAULT '[]'"),
     ("cves", "poc_checked", "TEXT"),
+    ("cves", "vc_added", "TEXT"),  # date added to VulnCheck's exploited list
 ]
 
 
@@ -158,6 +169,9 @@ class DB:
     def set_kev_flag(self, cid, date_added):
         self.x("UPDATE cves SET kev=1, kev_added=? WHERE id=?", (date_added, cid))
 
+    def set_vc_flag(self, cid, date_added):
+        self.x("UPDATE cves SET vc_added=? WHERE id=?", (date_added, cid))
+
     def set_poc(self, cid, pocs, checked):
         self.x("UPDATE cves SET poc=?, poc_checked=? WHERE id=?", (json.dumps(pocs), checked, cid))
 
@@ -230,6 +244,23 @@ class DB:
 
     def prune_victims(self, before):
         self.x("DELETE FROM victims WHERE discovered < ?", (before,))
+
+    def add_package(self, p):
+        self.x("INSERT OR REPLACE INTO packages(id,ecosystem,name,published,downloads,data) VALUES(?,?,?,?,?,?)",
+               (p["id"], p["ecosystem"], p["name"], p["published"], p["downloads"], json.dumps(p, ensure_ascii=False)))
+
+    def get_package(self, ecosystem, name, vid):
+        r = self.q("SELECT data FROM packages WHERE id=? AND ecosystem=? AND name=?", (vid, ecosystem, name))
+        return r[0]["data"] if r else None
+
+    def prune_packages(self, before):
+        self.x("DELETE FROM packages WHERE published < ?", (before,))
+
+    def set_blocklist(self, source, entries):
+        with self.lock, self.conn:
+            self.conn.execute("DELETE FROM blocklist WHERE source=?", (source,))
+            self.conn.executemany("INSERT OR IGNORE INTO blocklist(entry,source) VALUES(?,?)",
+                                  [(e, source) for e in entries])
 
     def set_toplist(self, rows):
         with self.lock, self.conn:

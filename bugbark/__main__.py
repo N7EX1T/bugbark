@@ -20,7 +20,9 @@ from .web import serve
 
 JOB_NAMES = {
     "nvd": "NVD (new CVEs)", "cveorg": "CVE.org (new CVEs)", "kev": "CISA KEV", "epss": "EPSS", "exploits": "exploit search",
-    "news": "security news", "hibp": "data breaches (HIBP)", "ransomware": "ransomware victims", "outbox": "quiet hours", "digest": "daily digest",
+    "news": "security news", "hibp": "data breaches (HIBP)", "ransomware": "ransomware victims",
+    "vulncheck": "VulnCheck KEV", "packages": "malicious packages", "internet": "internet outages",
+    "links": "link lists", "outbox": "quiet hours", "digest": "daily digest",
     "weekly": "weekly report", "sites": "site checks", "status": "status pages",
 }
 ALERT_AFTER = 3600  # a check must keep failing this long before BugBark warns about itself
@@ -126,11 +128,15 @@ def main():
         Job("kev", 3600, engine.run_kev),  # KEV first: the "exploited" flags depend on it
         Job("nvd", cfg["cve"]["check_minutes"] * 60, engine.run_nvd),
         Job("cveorg", cfg["cve"]["check_minutes"] * 60, engine.run_cveorg),
+        Job("vulncheck", 3600, engine.run_vulncheck),
         Job("epss", 6 * 3600, engine.run_epss),
         Job("exploits", 1800, engine.run_exploits),
         Job("news", cfg["news"]["interval_seconds"], engine.news.run),
         Job("hibp", cfg["breaches"]["interval_seconds"], engine.breaches.run_hibp),
         Job("ransomware", cfg["ransomware"]["interval_seconds"], engine.breaches.run_ransomware),
+        Job("packages", cfg["packages"]["interval_seconds"], engine.packages.run),
+        Job("internet", cfg["internet"]["interval_seconds"], engine.outages.run),
+        Job("links", cfg["links"]["interval_seconds"], engine.links.run),
         Job("outbox", 60, notifier.flush_held),  # alerts held during quiet hours
         Job("digest", 600, engine.run_digest),  # sends once a day, at [digest] hour
         Job("weekly", 600, engine.run_weekly),  # Mondays, at the same hour

@@ -62,6 +62,7 @@ def build(cfg, db, days, end=None):
             "victims": len(victims),
             "breaches": len(breaches),
             "accounts": sum(b["data"]["count"] for b in breaches),
+            "packages": db.q("SELECT COUNT(DISTINCT id) n FROM packages WHERE published >= ? AND published < ?", span)[0]["n"],
         },
         "major_per_day": _per_day(day_list, [r["published"] for r in major]),
         "victims_per_day": _per_day(day_list, [v["discovered"] for v in victims]),
@@ -71,6 +72,8 @@ def build(cfg, db, days, end=None):
                      for b in breaches[:10]],
         "notable_victims": [{k: v.get(k) for k in ("victim", "site", "grp", "country", "sector", "discovered", "url",
                                                   "rank")} for v in notable[:10]],
+        "packages": [dict(p["data"]) for p in db.q("""SELECT data FROM packages WHERE published >= ? AND published < ?
+                      AND downloads >= ? ORDER BY downloads DESC LIMIT 10""", span + (cfg["packages"]["min_weekly_downloads"],))],
         "stories": [{"title": s["title"], "sources": len(s["sources"]), "link": s["items"][0]["link"]}
                     for s in stories[:5]],
     }

@@ -2,7 +2,7 @@
 #
 # Never put secrets in this file: the repository is public.
 # Secrets come from environment variables (GitHub Actions secrets, or a .env file for Docker):
-#   NTFY_TOPIC, NTFY_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, NVD_API_KEY,
+#   NTFY_TOPIC, NTFY_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, NVD_API_KEY, VULNCHECK_TOKEN,
 #   BUGBARK_PUBLIC_URL, BUGBARK_WEB_TOKEN, BUGBARK_TIMEZONE
 
 [notify]
@@ -43,6 +43,12 @@ poc_search = true
 initial_days = 1
 keep_days = 60
 
+# Vendors to stay quiet about. Exploited CVEs and newly published exploits still alert.
+# On GitHub you can also tap "Mute" on a CVE in the dashboard: it opens a "Mute: <vendor>" issue
+# (only issues by the repository owner or collaborators count; close the issue to unmute).
+muted = []                 # e.g. ["IBM"]
+# VULNCHECK_TOKEN (free at vulncheck.com) adds VulnCheck's list of exploited CVEs, often days ahead of CISA's.
+
 # Software you run yourself: alerts start at a lower score (watch_min_cvss)
 watch = []                 # e.g. ["nginx", "Nextcloud", "Home Assistant"]
 watch_min_cvss = 7.0
@@ -76,6 +82,29 @@ min_accounts = 500000
 # all victims are counted in the weekly report.
 enabled = true
 max_rank = 100000
+
+[packages]
+# Malicious releases of npm and PyPI packages (OpenSSF malicious-packages, via OSV).
+# Alerts only for packages with at least this many weekly downloads: hijacked real libraries, not typosquats.
+enabled = true
+min_weekly_downloads = 5000
+
+[internet]
+# Country-wide internet outages (IODA, Georgia Tech), seen in routing data or active probing.
+# min_score filters out small blips; the Uptime tab lists the last 3 days.
+enabled = true
+min_score = 1500
+min_minutes = 60
+
+[links]
+# Malicious and phishing site lists for the dashboard's link checker (the Check tab).
+# The check runs on your phone: the link you check is never sent anywhere.
+enabled = true
+
+[links.lists]
+"URLhaus (malware)" = "https://malware-filter.gitlab.io/malware-filter/urlhaus-filter-domains.txt"
+"Phishing Filter" = "https://malware-filter.gitlab.io/malware-filter/phishing-filter-domains.txt"
+OpenPhish = "https://raw.githubusercontent.com/openphish/public_feed/refs/heads/main/feed.txt"
 
 [time]
 # Your timezone for the digest and quiet hours, e.g. "Europe/Berlin", "America/New_York".

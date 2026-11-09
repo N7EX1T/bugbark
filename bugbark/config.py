@@ -45,6 +45,10 @@ DEFAULTS = {
         "instant": "all",
         "poc_search": True,
         "github_token": "",
+        # Free key from vulncheck.com: a second, often faster list of exploited CVEs (VULNCHECK_TOKEN)
+        "vulncheck_token": "",
+        # Vendors to stay quiet about (still alerted when exploited); on GitHub also via "Mute: <vendor>" issues
+        "muted": [],
     },
     # Local time for the digest and quiet hours, e.g. "Europe/Berlin" (or the BUGBARK_TIMEZONE variable)
     "time": {"timezone": "UTC"},
@@ -75,6 +79,20 @@ DEFAULTS = {
     # Ransomware gangs' victims (ransomware.live); alert when the victim's website is among the world's
     # top max_rank sites (Tranco list), a rough sign of a large company
     "ransomware": {"enabled": True, "max_rank": 100000, "interval_seconds": 1800},
+    # Malicious releases of npm / PyPI packages (OpenSSF via OSV); alert when the package is widely used
+    "packages": {"enabled": True, "min_weekly_downloads": 5000, "max_per_run": 150, "interval_seconds": 1800},
+    # Country-wide internet outages (IODA)
+    "internet": {"enabled": True, "min_score": 1500, "min_minutes": 60, "interval_seconds": 1800},
+    # Lists of malicious and phishing sites for the dashboard's link checker
+    "links": {
+        "enabled": True,
+        "interval_seconds": 6 * 3600,
+        "lists": {
+            "URLhaus (malware)": "https://malware-filter.gitlab.io/malware-filter/urlhaus-filter-domains.txt",
+            "Phishing Filter": "https://malware-filter.gitlab.io/malware-filter/phishing-filter-domains.txt",
+            "OpenPhish": "https://raw.githubusercontent.com/openphish/public_feed/refs/heads/main/feed.txt",
+        },
+    },
     "monitor": {
         "interval_seconds": 60,
         "fail_threshold": 2,
@@ -111,7 +129,7 @@ DEFAULTS = {
 
 def _merge(base, over):
     for k, v in over.items():
-        if isinstance(v, dict) and isinstance(base.get(k), dict) and k not in ("pages", "feeds"):
+        if isinstance(v, dict) and isinstance(base.get(k), dict) and k not in ("pages", "feeds", "lists"):
             _merge(base[k], v)
         else:
             base[k] = v
@@ -127,6 +145,7 @@ ENV_OVERRIDES = {
     "TELEGRAM_CHAT_ID": ("notify", "telegram_chat_id"),
     "NVD_API_KEY": ("cve", "nvd_api_key"),
     "GITHUB_TOKEN": ("cve", "github_token"),
+    "VULNCHECK_TOKEN": ("cve", "vulncheck_token"),
     "BUGBARK_PUBLIC_URL": ("web", "public_url"),
     "BUGBARK_WEB_TOKEN": ("web", "token"),
     "BUGBARK_TIMEZONE": ("time", "timezone"),

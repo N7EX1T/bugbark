@@ -229,6 +229,28 @@ main { padding: 0 16px calc(96px + env(safe-area-inset-bottom)); max-width: 760p
 .item .d { font: 11.5px/1.45 var(--mono); color: var(--muted); margin-top: 2px; }
 .item a.t:hover { text-decoration: underline; text-decoration-color: var(--line2); text-underline-offset: 3px; }
 
+/* link check */
+.chk { display: flex; gap: 8px; margin-top: 12px; }
+.chk .search { flex: 1; min-width: 0; background-image: none; padding-left: 12px; }
+.chk .btn { flex: none; padding: 0 16px; }
+.verdict { margin-top: 12px; padding: 14px 16px; border: 1px solid; display: flex; gap: 12px; align-items: center; }
+.verdict b { display: block; font: 800 16px/1.2 var(--mono); letter-spacing: .08em; }
+.verdict span { display: block; font: 12px/1.4 var(--mono); opacity: .85; margin-top: 3px; overflow-wrap: anywhere; }
+.verdict .dot { width: 12px; height: 12px; border-radius: 50%; background: currentColor; box-shadow: 0 0 14px currentColor; flex: none; }
+.verdict.danger { color: var(--crit); border-color: rgba(255, 56, 96, .6); background: var(--crit-d); }
+.verdict.warn { color: var(--high); border-color: rgba(255, 159, 26, .55); background: var(--high-d); }
+.verdict.ok { color: var(--ok); border-color: rgba(61, 255, 154, .4); background: var(--ok-d); }
+.checks li { display: grid; grid-template-columns: 54px 1fr; gap: 8px; padding-left: 0; }
+.checks li::before { content: none; }
+.checks em { font: 800 10px/1.6 var(--mono); letter-spacing: .08em; font-style: normal; }
+.checks [data-l="danger"] em { color: var(--crit); } .checks [data-l="warn"] em { color: var(--high); }
+.checks [data-l="ok"] em { color: var(--ok); } .checks [data-l="info"] em { color: var(--muted); }
+.note { font: 11.5px/1.5 var(--mono); color: var(--muted); margin: 8px 0 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; align-items: center; font: 600 10.5px/1 var(--mono); color: var(--muted); letter-spacing: .06em; }
+.chips a { padding: 5px 7px; border: 1px solid var(--line2); color: var(--text); }
+.flag.muted { color: var(--muted); border-style: dashed; }
+.btn.wide { grid-column: 1 / -1; text-align: center; }
+
 nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: rgba(7, 9, 12, .92); backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--line2); padding-bottom: env(safe-area-inset-bottom); z-index: 6; }
 nav a { flex: 1; text-align: center; padding: 11px 0 12px; font: 700 10px/1 var(--mono); letter-spacing: .14em; color: var(--muted);
@@ -246,6 +268,7 @@ nav svg { display: block; margin: 0 auto 6px; width: 22px; height: 22px; }
 <nav>
   <a href="#/" id="nav-cves"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M12 3l8 3v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="M12 8v5M12 16v1"/></svg>Threats<span class="badge" id="b-cves" hidden></span></a>
   <a href="#/news" id="nav-news"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v8a2 2 0 0 1-2 2"/><path d="M8 9h5M8 13h5"/></svg>News</a>
+  <a href="#/check" id="nav-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>Check</a>
   <a href="#/report" id="nav-report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M4 20h16"/><path d="M7 16v-5M12 16V6M17 16v-8"/></svg>Report</a>
   <a href="#/status" id="nav-status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Uptime<span class="badge" id="b-status" hidden></span></a>
 </nav>
@@ -288,12 +311,17 @@ const data = {
   monitors: () => api(STATIC ? "api/monitors.json" : "api/monitors"),
   news: () => api(STATIC ? "api/news.json" : "api/news"),
   report: () => api(STATIC ? "api/report.json" : "api/report"),
+  outages: () => api(STATIC ? "api/outages.json" : "api/outages"),
+  links: () => api(STATIC ? "api/links.json" : "api/links"),
+  mute(name, on) {
+    return api(on ? "api/mute" : "api/unmute", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+  },
   health: () => api(STATIC ? "api/health.json" : "api/health"),
 };
 const state = { view: "important", q: "" };
 const SEV_SHORT = { CRITICAL: "CRIT", HIGH: "HIGH", MEDIUM: "MED", LOW: "LOW" };
 const JOB = { nvd: "NVD", cveorg: "CVE.ORG", kev: "KEV", epss: "EPSS", exploits: "POC", news: "NEWS", hibp: "HIBP", ransomware: "RANSOM",
-  outbox: "QUIET", digest: "DIGEST", weekly: "WEEKLY", sites: "SITES", status: "STATUS" };
+  outbox: "QUIET", digest: "DIGEST", vulncheck: "VULNCHECK", packages: "PKGS", internet: "NET", links: "LINKS", weekly: "WEEKLY", sites: "SITES", status: "STATUS" };
 
 function rel(ts) {
   if (!ts) return "";
@@ -316,6 +344,7 @@ function nav(tab) {
   $("#nav-cves").classList.toggle("on", tab === "cves");
   $("#nav-news").classList.toggle("on", tab === "news");
   $("#nav-report").classList.toggle("on", tab === "report");
+  $("#nav-check").classList.toggle("on", tab === "check");
   $("#nav-status").classList.toggle("on", tab === "status");
 }
 // "Remote, no login → full system takeover": highlight the outcome
@@ -358,11 +387,12 @@ async function loadList() {
           <span class="when">${rel(c.kev && c.kev_added > c.published ? c.kev_added : c.published)}</span></div>
         <div class="prod">${esc(c.product || "Unknown product")}</div>
         <div class="vec">${c.short ? vec(c.short) : esc(c.summary.slice(0, 90)) + "…"}</div>
-        ${c.kev || c.poc || (c.epss != null && c.epss >= .1) || c.status === "done" ? `<div class="flags">
+        ${c.kev || c.poc || c.muted || (c.epss != null && c.epss >= .1) || c.status === "done" ? `<div class="flags">
           ${c.kev ? '<span class="flag kev">EXPLOITED</span>' : ""}
           ${c.poc ? '<span class="flag poc">PUBLIC POC</span>' : ""}
           ${c.epss != null && c.epss >= .1 ? `<span class="flag epss">EPSS ${Math.round(c.epss * 100)}%</span>` : ""}
-          ${c.status === "done" ? '<span class="flag done">✓ HANDLED</span>' : ""}</div>` : ""}
+          ${c.status === "done" ? '<span class="flag done">✓ HANDLED</span>' : ""}
+          ${c.muted ? '<span class="flag muted">MUTED</span>' : ""}</div>` : ""}
       </div>
     </a>`).join("");
   const tab = (v, n, l, cls) => `<button class="stat ${cls} ${state.view === v ? "on" : ""}" data-v="${v}"><b>${n}</b><span>${l}</span></button>`;
@@ -374,6 +404,8 @@ async function loadList() {
     </div>
     ${h.notify ? "" : `<div class="warn">! Notifications are off: set the NTFY_TOPIC secret or environment variable</div>`}
     <input class="search" id="q" placeholder="vendor, product or CVE id" value="${esc(state.q)}" autocomplete="off">
+    ${h.muted && h.muted.length ? `<div class="chips">MUTED: ${h.muted.map(m => m.url && safeUrl(m.url)
+      ? `<a href="${esc(m.url)}" target="_blank" rel="noopener" title="Close the issue to unmute">${esc(m.name)} ✕</a>` : `<a href="#/q/${encodeURIComponent(m.name)}">${esc(m.name)}</a>`).join("")}</div>` : ""}
     <div class="label">${{ important: "Major threats", kev: "Exploited in the wild", all: "All recent CVEs" }[state.view]}${state.q ? ` · "${esc(state.q)}"` : ""} · ${d.items.length}</div>
     <div class="list">${rows || `<div class="empty">Nothing here yet.<br>The first check takes a few minutes.</div>`}</div>
     <p class="foot">${Object.entries(h.jobs).map(([k, j]) =>
@@ -391,6 +423,7 @@ async function showDetail(id) {
   renderHeader();
   $("#app").innerHTML = `<div class="empty">LOADING ${esc(id)}…</div>`;
   let c;
+  if (!health) health = await data.health().catch(() => null);  // the mute button needs the repository name
   try { c = await data.cve(id); } catch (e) {
     $("#app").innerHTML = `<a class="back" href="#/">← BACK</a><div class="empty">${esc(id)} is not in the dashboard.<br><br>
       <a class="back" href="https://nvd.nist.gov/vuln/detail/${esc(id)}" target="_blank" rel="noopener">OPEN IN NVD →</a><br>
@@ -415,7 +448,7 @@ async function showDetail(id) {
         <div class="gauge"><div class="bars">${Array.from({ length: 10 }, (_, i) => `<i class="${i < lit ? "on" : ""}"></i>`).join("")}</div>
           <span>CVSS · ${sev === "none" ? "not scored" : sev.toLowerCase()}</span></div>
       </div>
-      ${c.kev ? `<div class="exploit">EXPLOITED IN THE WILD SINCE ${date(c.kev_added).toUpperCase()}${k && k.ransomware ? " · RANSOMWARE" : ""}</div>` : ""}
+      ${c.kev ? `<div class="exploit">EXPLOITED IN THE WILD SINCE ${date(c.kev_added).toUpperCase()}${k && k.ransomware ? " · RANSOMWARE" : ""}${c.kev_source === "VulnCheck" ? " · VULNCHECK" : ""}</div>` : ""}
       ${c.poc ? `<div class="poc-strip">🧨 PUBLIC EXPLOIT CODE AVAILABLE · ${c.poc} SOURCE${c.poc > 1 ? "S" : ""}</div>` : ""}
     </div>
     <div class="tiles">
@@ -458,22 +491,47 @@ async function showDetail(id) {
     <div class="sec links"><h3>Links</h3>
       <a href="https://nvd.nist.gov/vuln/detail/${c.id}" target="_blank" rel="noopener">nvd.nist.gov/vuln/detail/${c.id}<small>NVD entry${c.origin === "cve.org" ? " · may not be processed yet" : ""}</small></a>
       <a href="https://www.cve.org/CVERecord?id=${c.id}" target="_blank" rel="noopener">cve.org/CVERecord?id=${c.id}<small>Official CVE record</small></a>
-      ${c.kev ? `<a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=${c.id}" target="_blank" rel="noopener">cisa.gov/known-exploited-vulnerabilities<small>KEV catalog</small></a>` : ""}
+      ${c.kev_source === "CISA" ? `<a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog?search_api_fulltext=${c.id}" target="_blank" rel="noopener">cisa.gov/known-exploited-vulnerabilities<small>KEV catalog</small></a>` : ""}
       ${[...fixRefs, ...otherRefs].slice(0, 12).map(link).join("")}
     </div>
 
     <div class="act">
       <button class="btn ${c.status === "done" ? "on" : ""}" data-s="done">✓ Handled</button>
       <button class="btn ${c.status === "dismissed" ? "on" : ""}" data-s="dismissed">Not relevant</button>
-    </div>`;
-  document.querySelectorAll(".act .btn").forEach(b => b.onclick = async () => {
+      ${muteButton(c)}
+    </div>
+    ${c.vendor || c.product ? `<p class="note">Mute stops alerts about ${esc(c.vendor || c.product)}, except when one of its CVEs is exploited or gets a public exploit.${STATIC ? " On GitHub it opens an issue: submit it to mute, close it to unmute." : ""}</p>` : ""}`;
+  const mb = $("#mute");
+  if (mb && mb.tagName === "BUTTON") mb.onclick = async () => {
+    await data.mute(mb.dataset.name, !c.muted);
+    showDetail(c.id);
+  };
+  document.querySelectorAll(".act .btn[data-s]").forEach(b => b.onclick = async () => {
     const s = c.status === b.dataset.s ? "seen" : b.dataset.s;
     await data.setStatus(c.id, s);
     c.status = s;
-    document.querySelectorAll(".act .btn").forEach(x => x.classList.toggle("on", x.dataset.s === s));
+    document.querySelectorAll(".act .btn[data-s]").forEach(x => x.classList.toggle("on", x.dataset.s === s));
   });
   window.scrollTo(0, 0);
   data.health().then(h => { health = h; renderHeader(); }).catch(() => {});
+}
+
+// Muting: self-hosted it is a setting; on GitHub Pages it is an issue in the repository ("Mute: <vendor>")
+function muteButton(c) {
+  const name = c.vendor || c.product;
+  if (!name) return "";
+  const label = `${c.muted ? "🔔 UNMUTE" : "🔇 MUTE"} ${esc(name.toUpperCase())}`;
+  if (!STATIC) return `<button class="btn wide" id="mute" data-name="${esc(name)}">${label}</button>`;
+  const repo = health && health.repo;
+  if (c.muted) {
+    const m = (health && health.muted || []).find(m => m.url && name.toLowerCase().includes(m.name.toLowerCase()));
+    return m && safeUrl(m.url) ? `<a class="btn wide" id="mute" href="${esc(m.url)}" target="_blank" rel="noopener">${label} · CLOSE ISSUE</a>`
+      : `<span class="btn wide" id="mute">MUTED IN CONFIG.TOML</span>`;
+  }
+  if (!repo) return "";
+  const url = `https://github.com/${repo}/issues/new?title=${encodeURIComponent("Mute: " + name)}&body=${encodeURIComponent(
+    `BugBark stays quiet about ${name} while this issue is open (exploited CVEs still alert). Close it to unmute.\n\nFrom ${c.id}.`)}`;
+  return `<a class="btn wide" id="mute" href="${esc(url)}" target="_blank" rel="noopener">${label}</a>`;
 }
 
 /* ---------- news ---------- */
@@ -572,6 +630,8 @@ function renderReport() {
     <div class="d">${esc(b.data_classes.slice(0, 5).join(", "))}${b.data_classes.length > 5 ? ` +${b.data_classes.length - 5}` : ""} · added ${rel(b.added)}</div></div>`;
   const victim = v => `<div class="item">${safeUrl(v.url) ? `<a class="t" href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.victim)}</a>` : `<div class="t">${esc(v.victim)}</div>`}
     <div class="d">${esc([v.grp, v.country, v.sector].filter(Boolean).join(" · "))} · top ${Number(v.rank).toLocaleString("en-US")} site · ${rel(v.discovered)}</div></div>`;
+  const pkg = p => `<div class="item"><a class="t" href="https://osv.dev/vulnerability/${encodeURIComponent(p.id)}" target="_blank" rel="noopener">${esc(p.name)}</a>
+    <div class="d">${esc(p.ecosystem)} · ${compact(p.downloads || 0)} downloads/week · ${esc((p.versions || []).slice(0, 4).join(", ") || "all versions")}</div></div>`;
   const story = s => `<div class="item">${safeUrl(s.link) ? `<a class="t" href="${esc(s.link)}" target="_blank" rel="noopener">${esc(s.title)}</a>` : `<div class="t">${esc(s.title)}</div>`}
     <div class="d">${s.sources} outlets</div></div>`;
   $("#app").innerHTML = `
@@ -579,13 +639,14 @@ function renderReport() {
     <div id="report">
     <div class="kpis">
       ${tile(t.major, "Major CVEs")}${tile(t.exploited, "Newly exploited")}${tile(t.poc, "Public exploit")}
-      ${tile(t.victims, "Ransomware claims")}${tile(t.breaches, "Data breaches")}${tile(compact(t.accounts), "Accounts leaked")}
+      ${tile(t.victims, "Ransomware claims")}${tile(t.breaches, `Breaches · ${compact(t.accounts)} accts`)}${tile(t.packages, "Malicious pkgs")}
     </div>
     <div class="chart"><h3>Major vulnerabilities per day</h3><div class="sub">${dayLabel(r.from)} – ${dayLabel(r.to)} · by publication date</div>${columns(r.major_per_day, "major CVEs")}</div>
     <div class="chart"><h3>Top vendors</h3><div class="sub">major CVEs</div>${ranked(r.top_vendors, "major CVEs")}</div>
     <div class="chart"><h3>Ransomware claims per day</h3><div class="sub">victims posted on gangs' leak sites (ransomware.live)</div>${columns(r.victims_per_day, "victims")}</div>
     <div class="chart"><h3>Most active gangs</h3><div class="sub">claimed victims</div>${ranked(r.top_groups, "victims")}</div>
     <div class="chart"><h3>Notable ransomware victims</h3><div class="sub">company website among the world's top sites</div>${r.notable_victims.map(victim).join("") || `<div class="sub">None in this period.</div>`}</div>
+    <div class="chart"><h3>Malicious packages</h3><div class="sub">widely used npm / PyPI packages with a malicious release</div>${(r.packages || []).map(pkg).join("") || `<div class="sub">None in this period.</div>`}</div>
     <div class="chart"><h3>Data breaches</h3><div class="sub">added to Have I Been Pwned</div>${r.breaches.map(breach).join("") || `<div class="sub">None in this period.</div>`}</div>
     <div class="chart"><h3>Biggest stories</h3><div class="sub">covered by the most outlets</div>${r.stories.map(story).join("") || `<div class="sub">No big stories.</div>`}</div>
     </div>`;
@@ -593,14 +654,124 @@ function renderReport() {
   bindTips();
 }
 
+/* ---------- link check ---------- */
+// Runs entirely on this device: the link is compared with downloaded lists and simple rules, never sent anywhere
+const SHORTENERS = new Set("bit.ly t.co tinyurl.com goo.gl ow.ly is.gd buff.ly cutt.ly rb.gy s.id t.ly shorturl.at tiny.cc rebrand.ly bl.ink lnkd.in qrco.de s4w.in v.gd clck.ru".split(" "));
+const RISKY_TLDS = new Set("zip mov xyz top sbs click cfd icu rest cyou bond buzz monster quest lol gq tk ml cf ga work support country kim men loan review party cam live shop online site".split(" "));
+const FREE_HOSTS = "blogspot.com weebly.com wixsite.com firebaseapp.com web.app pages.dev workers.dev netlify.app vercel.app github.io 000webhostapp.com ngrok.io ngrok-free.app glitch.me repl.co herokuapp.com sites.google.com forms.gle r2.dev ipfs.io godaddysites.com square.site webflow.io framer.app notion.site translate.goog".split(" ");
+let linkData = null, lastCheck = "";
+function regDomain(host) {
+  const p = host.split(".");
+  // example.co.uk, example.com.au: a short second level under a country code
+  return p.length > 2 && p[p.length - 1].length === 2 && p[p.length - 2].length <= 3 ? p.slice(-3).join(".") : p.slice(-2).join(".");
+}
+function lev(a, b) {
+  if (Math.abs(a.length - b.length) > 2) return 9;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+const unglyph = s => s.replace(/rn/g, "m").replace(/vv/g, "w").replace(/0/g, "o").replace(/[1l|]/g, "l").replace(/5/g, "s");
+function analyze(raw) {
+  let text = raw.trim();
+  const found = text.match(/https?:\/\/\S+/i);
+  if (found) text = found[0];
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(text)) text = "https://" + text;
+  let u;
+  try { u = new URL(text); } catch { return null; }
+  const host = u.hostname.toLowerCase().replace(/\.$/, ""), reg = regDomain(host), label = reg.split(".")[0];
+  const tld = host.split(".").pop(), full = u.href.toLowerCase().replace(/\/$/, "");
+  const out = [];
+  const add = (level, text) => out.push({ level, text });
+  const lists = linkData.lists, sets = linkData.sets;
+  const parents = host.split(".").map((_, i, a) => a.slice(i).join(".")).filter(d => d.includes("."));
+  for (const [src, set] of Object.entries(sets)) {
+    const hit = parents.find(d => set.has(d)) || (set.has(full) || [...set].some(e => e.startsWith("http") && full.startsWith(e)) ? u.href : null);
+    if (hit) add("danger", `Listed as malicious by ${src}${hit !== u.href ? ` (${hit})` : ""}`);
+  }
+  if (!["http:", "https:"].includes(u.protocol)) add("warn", `Not a web link (${u.protocol.replace(":", "")}): it may open or run something on your device`);
+  if (u.username || /@/.test(u.href.split("?")[0].replace(/^[a-z]+:\/\//i, "").split("/")[0]))
+    add("danger", `The real site is ${host}: the part before "@" is only decoration to fool you`);
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.startsWith("[")) add("warn", "Uses a bare IP address instead of a site name");
+  if (host.split(".").some(p => p.startsWith("xn--"))) add("warn", "International (punycode) name: letters may imitate another site's");
+  const rank = linkData.top.indexOf(reg), free = FREE_HOSTS.find(f => host === f || host.endsWith("." + f));
+  // On free hosting the popular domain belongs to the host, not to whoever made the page
+  if (rank >= 0 && !free) add("ok", `${reg} is one of the world's most visited sites (#${rank + 1})`);
+  else if (rank < 0) {
+    const near = linkData.top.slice(0, 1500).find(d => {
+      const l = d.split(".")[0];
+      return l.length >= 5 && l !== label && (lev(l, label) <= (l.length >= 8 ? 2 : 1) || unglyph(label) === unglyph(l));
+    });
+    if (near) add("warn", `Looks like ${near} but isn't: a classic phishing trick`);
+    const brand = linkData.top.slice(0, 300).map(d => d.split(".")[0]).find(l => l.length >= 5 && l !== label && host.split(/[.-]/).includes(l));
+    if (brand) add("warn", `Mentions "${brand}" but the site is ${reg}`);
+  }
+  if (SHORTENERS.has(host)) add("info", "Link shortener: it hides where you will end up. Check the final address after it opens");
+  if (free) add("info", `Free hosting (${free}): anyone can publish here, phishing pages often do`);
+  if (RISKY_TLDS.has(tld)) add("info", `The .${tld} ending is cheap and common in scams`);
+  if (host.split(".").length > 4 || host.length > 45) add("info", "Very long address with many parts");
+  if (u.protocol === "http:") add("info", "Not encrypted (http): never enter passwords here");
+  if (!out.some(o => o.level === "danger")) add("info", `Not on the ${Object.keys(sets).length} blocklists (${Object.values(sets).reduce((n, s) => n + s.size, 0).toLocaleString("en-US")} known bad sites)`);
+  const level = out.some(o => o.level === "danger") ? "danger" : out.some(o => o.level === "warn") ? "warn" : "ok";
+  return { url: u.href, host, level, checks: out.sort((a, b) => ["danger", "warn", "info", "ok"].indexOf(a.level) - ["danger", "warn", "info", "ok"].indexOf(b.level)) };
+}
+async function showCheck(prefill) {
+  nav("check");
+  renderHeader();
+  if (prefill != null) lastCheck = prefill;
+  $("#app").innerHTML = `
+    <div class="label">Check a link</div>
+    <div class="chk"><input class="search" id="url" placeholder="paste a link" value="${esc(lastCheck)}" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="url">
+      <button class="btn" id="go">CHECK</button></div>
+    <p class="note">Checked on this device: the link is not sent anywhere. Don't open it before checking.</p>
+    <div id="result"></div>`;
+  const go = async () => {
+    lastCheck = $("#url").value;
+    if (!lastCheck.trim()) return;
+    if (!linkData) {
+      $("#result").innerHTML = `<div class="empty">LOADING LISTS…</div>`;
+      const d = await data.links();
+      linkData = { ...d, sets: Object.fromEntries(Object.entries(d.lists).map(([k, v]) => [k, new Set(v)])) };
+    }
+    const r = analyze(lastCheck);
+    if (!r) { $("#result").innerHTML = `<div class="verdict warn"><span class="dot"></span><div><b>NOT A LINK</b><span>Paste a web address</span></div></div>`; return; }
+    const title = { danger: "DANGEROUS", warn: "SUSPICIOUS", ok: "NO KNOWN THREATS" }[r.level];
+    const sub = { danger: "Don't open it. Don't enter any data.", warn: "Be careful: only open it if you trust the sender and the address is exactly right.",
+      ok: "Not a guarantee: new phishing sites appear every minute." }[r.level];
+    const enc = encodeURIComponent(r.url);
+    $("#result").innerHTML = `
+      <div class="verdict ${r.level}"><span class="dot"></span><div><b>${title}</b><span>${esc(r.host)}</span><span>${sub}</span></div></div>
+      <div class="sec checks"><h3>What we found</h3><ul>${r.checks.map(c => `<li data-l="${c.level}"><em>${{ danger: "DANGER", warn: "WARN", info: "NOTE", ok: "GOOD" }[c.level]}</em><span>${esc(c.text)}</span></li>`).join("")}</ul></div>
+      <div class="sec links"><h3>Deeper scan</h3>
+        <p class="caution" style="color:var(--muted)">These services receive the link and scan it on their side.</p>
+        <a href="https://www.virustotal.com/gui/search/${encodeURIComponent(enc)}" target="_blank" rel="noopener">VirusTotal<small>70+ antivirus engines</small></a>
+        <a href="https://transparencyreport.google.com/safe-browsing/search?url=${enc}" target="_blank" rel="noopener">Google Safe Browsing<small>what Chrome and Android block</small></a>
+        <a href="https://urlscan.io/search/#${encodeURIComponent(r.host)}" target="_blank" rel="noopener">urlscan.io<small>earlier scans of this site</small></a>
+      </div>
+      <p class="foot">Lists updated ${linkData.updated ? rel(linkData.updated) : "never"}</p>`;
+  };
+  $("#go").onclick = () => go().catch(e => { $("#result").innerHTML = `<div class="empty">NO SIGNAL: ${esc(e.message)}</div>`; });
+  $("#url").onkeydown = e => { if (e.key === "Enter") $("#go").click(); };
+  if (lastCheck.trim()) $("#go").click(); else $("#url").focus();
+}
+
 /* ---------- uptime ---------- */
 async function showStatus() {
   nav("status");
   renderHeader();
-  const [d, h] = await Promise.all([data.monitors(), data.health()]);
+  const [d, h, net] = await Promise.all([data.monitors(), data.health(), data.outages().catch(() => ({ items: [] }))]);
   health = h;
   renderHeader();
   setBadge("#b-status", d.down);
+  const outage = e => `<div class="m ${e.ongoing ? "down" : ""}">
+      <div class="mn">${esc(e.country)}</div>
+      <span class="st ${e.ongoing ? "down" : "unk"}">${e.ongoing ? "DOWN " + dur(e.start).toUpperCase() : "ENDED"}</span>
+      <div class="md">${esc(e.source)} · since ${esc(rel(e.start))} · ${esc(String(Math.round(e.minutes / 60)))}h${safeUrl(e.url) ? ` · <a href="${esc(e.url)}" target="_blank" rel="noopener" style="text-decoration:underline">IODA</a>` : ""}</div>
+    </div>`;
   const own = d.items.filter(i => i.kind !== "status"), pub = d.items.filter(i => i.kind === "status");
   const row = i => {
     const st = i.up === 1 ? `<span class="st up">${i.latency != null ? i.latency + " MS" : "UP"}</span>`
@@ -620,13 +791,23 @@ async function showStatus() {
     <div class="label">My sites &amp; services · ${own.length}</div>
     ${own.length ? `<div class="mon">${own.map(row).join("")}</div>` : `<div class="empty" style="padding:14px">add sites in config.toml → [[monitor.sites]]</div>`}
     <div class="label">Public services · ${pub.length}</div>
-    <div class="mon">${pub.sort((a, b) => (a.up ?? 2) - (b.up ?? 2)).map(row).join("") || `<div class="empty">no data</div>`}</div>`;
+    <div class="mon">${pub.sort((a, b) => (a.up ?? 2) - (b.up ?? 2)).map(row).join("") || `<div class="empty">no data</div>`}</div>
+    <div class="label">Internet outages by country · 3 days · ${net.items.length}</div>
+    <div class="mon">${net.items.map(outage).join("") || `<div class="empty" style="padding:14px">No major outages.</div>`}</div>`;
 }
 
+// Shared from another app (PWA share target): ?url=... or ?text=... opens the link checker
+(() => {
+  const sp = new URLSearchParams(location.search), shared = sp.get("url") || sp.get("text") || sp.get("title");
+  if (shared) {
+    history.replaceState(null, "", location.pathname + (sp.get("token") ? "?token=" + encodeURIComponent(sp.get("token")) : "") + "#/check");
+    lastCheck = shared;
+  }
+})();
 function route() {
   const h = location.hash;
   if (h.startsWith("#/q/")) { state.view = "important"; state.q = decodeURIComponent(h.slice(4)); }
-  const p = h.startsWith("#/cve/") ? showDetail(h.slice(6)) : h === "#/status" ? showStatus() : h === "#/news" ? showNews() : h === "#/report" ? showReport() : showList();
+  const p = h.startsWith("#/cve/") ? showDetail(h.slice(6)) : h === "#/status" ? showStatus() : h === "#/news" ? showNews() : h === "#/report" ? showReport() : h === "#/check" ? showCheck() : showList();
   p.catch(e => { $("#app").innerHTML = `<div class="empty">NO SIGNAL: ${esc(e.message)}</div>`; });
 }
 window.addEventListener("hashchange", route);

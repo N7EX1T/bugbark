@@ -17,11 +17,13 @@ TYPES = {".html": "text/html; charset=utf-8", ".svg": "image/svg+xml",
 CVE_ID = re.compile(r"^CVE-\d{4}-\d{4,}$")
 
 
-def list_item(r):
+def list_item(r, muted=False):
     data = r["data"]
     return {
         "id": r["id"], "published": r["published"], "score": r["score"], "severity": r["severity"],
-        "product": r["product"] or r["vendor"], "vendor": r["vendor"], "kev": bool(r["kev"]), "kev_added": r["kev_added"],
+        "product": r["product"] or r["vendor"], "vendor": r["vendor"],
+        "kev": bool(r["kev"] or r["vc_added"]), "kev_added": r["kev_added"] or r["vc_added"],
+        "kev_source": "CISA" if r["kev"] else "VulnCheck" if r["vc_added"] else None, "muted": muted,
         "epss": r["epss"], "level": r["level"], "important": bool(r["important"]),
         "status": r["status"], "reasons": r["reasons"],
         "poc": len(r["poc"] or []) + len(exploit_refs(data)),
@@ -41,13 +43,13 @@ class App:
         if view == "important":
             where.append("important=1")
         elif view == "kev":
-            where.append("kev=1")
+            where.append("(kev=1 OR vc_added IS NOT NULL)")
         if text:
             where.append("(id LIKE ? OR product LIKE ? OR vendor LIKE ? OR data LIKE ?)")
             args += [f"%{text}%"] * 4
         sql = "SELECT * FROM cves" + (" WHERE " + " AND ".join(where) if where else "")
-        sql += f" ORDER BY MAX(published, COALESCE(kev_added, '')) DESC LIMIT {int(limit)}"
-        items = [list_item(r) for r in self.db.q(sql, args)]
+        sql += f" ORDER BY MAX(published, COALESCE(kev_added, vc_added, '')) DESC LIMIT {int(limit)}"
+        items = [list_item(r, self.engine.is_muted(r)) for r in self.db.q(sql, args)]
         new = self.db.q("SELECT COUNT(*) n FROM cves WHERE important=1 AND status='new'")[0]["n"]
         return {"items": items, "new": new}
 
@@ -66,7 +68,7 @@ class App:
             self.db.set_status(cid, "seen")
         kev = self.db.get_kev(cid)
         data = row["data"]
-        out = list_item(row)
+        out = list_item(row, self.engine.is_muted(row))
         out.update(
             status=row["status"],
             description=data.get("description"),
@@ -86,6 +88,12 @@ class App:
         stories.sort(key=lambda s: (s["big"], len(s["sources"]) > 1, s["last"]), reverse=True)
         return {"items": stories[:150], "big": sum(1 for s in stories if s["big"]), "min_sources": min_sources}
 
+    def outages(self):
+        return {"items": json.loads(self.db.get_meta("internet_events", "[]"))}
+
+    def links(self):
+        return self.engine.links.export()
+
     def report(self):
         return {"week": report.build(self.cfg, self.db, 7), "month": report.build(self.cfg, self.db, 30)}
 
@@ -103,7 +111,9 @@ class App:
             v = self.db.get_meta("job:" + name)
             if v:
                 jobs[name] = json.loads(v)
-        return {"jobs": jobs, "notify": self.notifier.enabled, "generated": util.iso(util.now())}
+        return {"jobs": jobs, "notify": self.notifier.enabled, "generated": util.iso(util.now()),
+                "repo": os.environ.get("GITHUB_REPOSITORY"),
+                "muted": [{"name": n, "url": u} for n, u in self.engine.muted()]}
 
 
 def make_handler(app):
@@ -165,6 +175,10 @@ def make_handler(app):
                         return self._send(400, {"error": "invalid CVE ID"})
                     r = app.cve(cid)
                     return self._send(200, r) if r else self._send(404, {"error": "not found"})
+                if p == "/api/outages":
+                    return self._send(200, app.outages())
+                if p == "/api/links":
+                    return self._send(200, app.links())
                 if p == "/api/report":
                     return self._send(200, app.report())
                 if p == "/api/news":
@@ -183,11 +197,21 @@ def make_handler(app):
             ok, _ = self._auth({})
             if not ok:
                 return self._send(401, {"error": "unauthorized"})
+            length = int(self.headers.get("Content-Length") or 0)
+            body = json.loads(self.rfile.read(length) or b"{}")
+            if u.path in ("/api/mute", "/api/unmute"):
+                name = str(body.get("name") or "").strip()[:80]
+                if not name:
+                    return self._send(400, {"error": "name required"})
+                muted = [m for m in json.loads(app.db.get_meta("muted_local", "[]")) if m.lower() != name.lower()]
+                if u.path == "/api/mute":
+                    muted.append(name)
+                app.db.set_meta("muted_local", json.dumps(muted))
+                app.engine._muted = None
+                return self._send(200, {"ok": True})
             m = re.match(r"^/api/cve/(CVE-\d{4}-\d{4,})/status$", u.path)
             if not m:
                 return self._send(404, {"error": "not found"})
-            length = int(self.headers.get("Content-Length") or 0)
-            body = json.loads(self.rfile.read(length) or b"{}")
             status = body.get("status")
             if status not in ("new", "seen", "done", "dismissed"):
                 return self._send(400, {"error": "invalid status"})

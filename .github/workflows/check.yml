@@ -11,6 +11,7 @@ permissions:
   pages: write      # publish the dashboard
   id-token: write
   actions: write    # keep the schedule from being auto-disabled
+  issues: read      # "Mute: <vendor>" issues
 
 concurrency:
   group: check
@@ -42,6 +43,7 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+          VULNCHECK_TOKEN: ${{ secrets.VULNCHECK_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}  # searching GitHub for public exploit code
           # A secret, not a variable: public run logs would show a variable's value
           BUGBARK_TIMEZONE: ${{ secrets.BUGBARK_TIMEZONE }}

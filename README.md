@@ -14,7 +14,7 @@ Barks when a bug bites: push notifications to your phone about **major new vulne
 
 **Vulnerabilities.** Every 15 minutes it pulls fresh CVEs from the official [CVE list](https://www.cve.org) (minutes after publication) and [NVD](https://nvd.nist.gov), and alerts only on the ones that matter:
 
-- **actively exploited** in the wild ([CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog)),
+- **actively exploited** in the wild ([CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog), and [VulnCheck KEV](https://vulncheck.com/kev) with a free token),
 - **likely to be exploited** soon ([EPSS](https://www.first.org/epss/) ≥ 50%),
 - **critical** (CVSS ≥ 9) in products of major vendors: Microsoft, Apple, Google, Linux, Cisco, Fortinet, Ivanti, VMware, Oracle, and more (editable list).
 
@@ -26,9 +26,17 @@ Each alert says in plain words what the risk is ("Remote, no login → full syst
 
 **Security news.** Headlines from BleepingComputer, The Hacker News, SecurityWeek, The Record, Krebs on Security, Dark Reading and others are grouped into stories. When three or more outlets cover the same event (a big breach, a ransomware attack, a mass-exploited bug), you get one alert. Everything else is in the dashboard's News tab and in the daily digest.
 
+**Malicious packages.** When a widely used npm or PyPI package (5,000+ weekly downloads) gets a malicious release, from the [OpenSSF malicious-packages](https://github.com/ossf/malicious-packages) database: which versions, and what to do if you installed one.
+
 **Data breaches.** New breaches added to [Have I Been Pwned](https://haveibeenpwned.com) with 500K+ accounts: who, how many, and what leaked (with a warning when passwords are included).
 
 **Ransomware.** Victims that ransomware gangs post on their leak sites, via [ransomware.live](https://www.ransomware.live). You get an alert when the victim is a large company (its website is in the world's top 100,000, by the [Tranco](https://tranco-list.eu) list); every claim is counted in the weekly report.
+
+**Internet outages.** When a whole country drops off the internet (a cut cable, a blackout, a government shutdown), from [IODA](https://ioda.inetintel.cc.gatech.edu).
+
+**Link checker.** The Check tab tells you whether a link is safe to open: it compares it with ~40,000 known malware and phishing sites (URLhaus, OpenPhish and more) and looks for tricks like look-alike names (paypa1.com), fake "@" addresses and lookalike letters. It runs on your phone and the link is never sent anywhere. Install the dashboard as an app and you can share a link to BugBark from any app.
+
+**Mute.** Too many alerts about one vendor? Tap Mute on any of its CVEs. Exploited ones still come through.
 
 **Weekly report.** On Mondays, the past week in numbers: major CVEs, top vendors, ransomware claims and the most active gangs, data breaches, and the biggest stories. The dashboard's Report tab shows the same with charts, for 7 or 30 days.
 
@@ -57,6 +65,7 @@ Optional secrets:
 | `NVD_API_KEY` | [Free NVD key](https://nvd.nist.gov/developers/request-an-api-key): faster and more reliable NVD requests. Paste the key shown after you open the activation link from the e-mail |
 | `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID` | Also send alerts to Telegram |
 | `NTFY_TOKEN` | Access token for a protected or self-hosted ntfy server |
+| `VULNCHECK_TOKEN` | [Free VulnCheck token](https://vulncheck.com/register): a second list of exploited CVEs, often days ahead of CISA |
 | `BUGBARK_TIMEZONE` | Your timezone for the digest, weekly report and quiet hours, e.g. `Europe/Berlin` (default UTC) |
 
 On GitHub Actions the exploit search uses the built-in `GITHUB_TOKEN`; self-hosted, set `GITHUB_TOKEN` to any token for a higher search rate limit.
@@ -69,7 +78,7 @@ On GitHub Actions the exploit search uses the built-in `GITHUB_TOKEN`; self-host
 
 ## Configuration
 
-Edit [`config.toml`](config.toml): CVSS threshold, vendor list, a `watch` list for software you run yourself (alerts start from CVSS 7), instant vs. digest alerts, digest time, quiet hours, breach and ransomware thresholds, news feeds and how many outlets make a story "big", your sites and ports, and status pages. Never put secrets there: they come from environment variables.
+Edit [`config.toml`](config.toml): CVSS threshold, vendor list, a `watch` list for software you run yourself (alerts start from CVSS 7), instant vs. digest alerts, digest time, quiet hours, muted vendors, breach, ransomware, package and outage thresholds, link lists, news feeds and how many outlets make a story "big", your sites and ports, and status pages. Never put secrets there: they come from environment variables.
 
 ## Self-hosting
 

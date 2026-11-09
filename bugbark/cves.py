@@ -1,4 +1,6 @@
 """Collects fresh CVEs (NVD), exploited-in-the-wild ones (CISA KEV) and EPSS scores, and picks the major ones."""
+import json
+import os
 import re
 import time
 import urllib.error
@@ -6,14 +8,19 @@ import urllib.parse
 from datetime import timedelta
 
 from . import cveorg, report, util
-from .explain import explain
 from .breaches import Breaches
-from .news import News
+from .explain import explain
 from .exploits import exploit_refs, github_pocs
+from .links import Links
+from .news import News
+from .outages import Outages
+from .packages import Packages
 from .util import log
 
 NVD_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 KEV_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+VULNCHECK_KEV = "https://api.vulncheck.com/v3/index/vulncheck-kev"
+GITHUB_API = "https://api.github.com"
 EPSS_URL = "https://api.first.org/data/v1/epss"
 
 LEVEL_RANK = {"kev": 3, "critical": 2, "high": 1, None: 0}
@@ -21,6 +28,11 @@ LEVEL_RANK = {"kev": 3, "critical": 2, "high": 1, None: 0}
 RENOTIFY_KEYS = {"kev", "poc", "epss"}
 UPDATE_PREFIX = {"kev": "Now exploited: ", "poc": "Exploit published: ", "epss": "Risk increased: "}
 NA = {"", "n/a", "na", "-", "*", "unspecified", "unknown"}
+
+
+def exploited(row):
+    """Known to be exploited: in CISA's catalog or in VulnCheck's."""
+    return bool(row["kev"] or row.get("vc_added"))
 
 
 def severity_for(score):
@@ -213,6 +225,10 @@ class Engine:
         self.watch = Matcher(self.c["watch"]) if self.c["watch"] else None
         self.news = News(cfg, db, notifier)
         self.breaches = Breaches(cfg, db, notifier)
+        self.packages = Packages(cfg, db, notifier)
+        self.outages = Outages(cfg, db, notifier)
+        self.links = Links(cfg, db)
+        self._muted = None
 
     # --- NVD ---
     def _nvd(self, params):
@@ -321,6 +337,66 @@ class Engine:
         log.info("CVE.org: %s changes, %s fresh CVEs stored", len(changes), len(ids))
         self.process(ids)
         self.db.set_meta("cveorg_last", newest)
+
+    # --- VulnCheck KEV ---
+    def run_vulncheck(self):
+        """VulnCheck's list of exploited CVEs: bigger than CISA's and often days ahead of it. Needs a free token."""
+        token = self.c["vulncheck_token"]
+        if not token:
+            return
+        d = util.http_json(VULNCHECK_KEV + "?sort=date_added&order=desc&limit=100",
+                           headers={"Authorization": "Bearer " + token.strip()}, timeout=60)
+        first_run = self.db.get_meta("vckev_init") is None
+        ids = []
+        for e in d.get("data") or []:
+            cves = e.get("cve") or []
+            added = iso_date(e.get("date_added") or "") or util.iso(util.now())
+            for cid in [cves] if isinstance(cves, str) else cves:
+                row = self.db.get_cve(cid)
+                if row and row.get("vc_added"):
+                    continue
+                if not row:
+                    if first_run:
+                        continue  # the first run only marks CVEs we already have
+                    try:
+                        self._nvd_pause()
+                        if not self.fetch_one(cid):
+                            continue
+                    except Exception as ex:
+                        log.warning("NVD: could not fetch %s: %s", cid, ex)
+                        continue
+                self.db.set_vc_flag(cid, added)
+                ids.append(cid)
+        log.info("VulnCheck KEV: %s newly exploited CVEs%s", len(ids), " (initial load)" if first_run else "")
+        self.process(ids, suppress=first_run)
+        self.db.set_meta("vckev_init", "1")
+
+    # --- muted vendors ---
+    def muted(self):
+        """[(name, issue url or None)]: from config.toml, from the dashboard (self-hosted),
+        and from open "Mute: <vendor>" GitHub issues written by the repository's owner or collaborators."""
+        if self._muted and time.time() - self._muted[0] < 600:
+            return self._muted[1]
+        out = [(m, None) for m in self.c["muted"]]
+        out += [(m, None) for m in json.loads(self.db.get_meta("muted_local", "[]"))]
+        repo = os.environ.get("GITHUB_REPOSITORY")
+        if repo:
+            headers = {"Authorization": "Bearer " + self.c["github_token"]} if self.c["github_token"] else {}
+            try:
+                for i in util.http_json(f"{GITHUB_API}/repos/{repo}/issues?state=open&per_page=100",
+                                        headers=headers, timeout=30, retries=2) or []:
+                    title = i.get("title", "")
+                    # Anyone can open an issue on a public repository: only trust people with write access
+                    if title.lower().startswith("mute:") and i.get("author_association") in ("OWNER", "MEMBER", "COLLABORATOR"):
+                        out.append((title[5:].strip(), i.get("html_url")))
+            except Exception as e:
+                log.warning("Could not read mute issues: %s", e)
+        self._muted = (time.time(), [(n, u) for n, u in out if n])
+        return self._muted[1]
+
+    def is_muted(self, row):
+        names = [n for n, _ in self.muted()]
+        return bool(names) and bool(Matcher(names).find(f"{row['vendor'] or ''} ; {row['product'] or ''}"))
 
     # --- CISA KEV ---
     def run_kev(self):
@@ -439,13 +515,13 @@ class Engine:
         rows = self.db.q("""SELECT * FROM cves WHERE important=1 AND status != 'dismissed'
                             AND (published >= ? OR kev_added >= ?)""", (since, since))
         rows.sort(key=lambda r: (LEVEL_RANK[r["level"]], bool(r["poc"]), r["score"] or 0), reverse=True)
-        kev = sum(1 for r in rows if r["kev"])
+        kev = sum(1 for r in rows if exploited(r))
         poc = sum(1 for r in rows if r["poc"])
         lines = [f"Last 24h: {len(rows)} major · {kev} exploited · {poc} with public exploit"]
         if rows:
             lines += ["", "Top threats:"]
             for r in rows[:5]:
-                tag = " · EXPLOITED" if r["kev"] else " · PoC" if r["poc"] else ""
+                tag = " · EXPLOITED" if exploited(r) else " · PoC" if r["poc"] else ""
                 score = f" · {r['score']:.1f}" if r["score"] is not None else ""
                 lines.append(f"• {r['id']} · {r['product'] or r['vendor'] or '?'}{score}{tag}")
         else:
@@ -493,6 +569,10 @@ class Engine:
             if k and k["data"].get("ransomware"):
                 text += ", including by ransomware"
             reasons.append(text)
+            keys.append("kev")
+            bump("kev")
+        elif row.get("vc_added"):
+            reasons.append("Exploited in the wild (VulnCheck KEV, not yet in CISA's catalog)")
             keys.append("kev")
             bump("kev")
         if row["epss"] is not None and row["epss"] >= self.c["epss_threshold"]:
@@ -557,11 +637,16 @@ class Engine:
         if instant == "off":
             return
         if instant == "exploited":
-            pending = [p for p in pending if p[0]["kev"] or p[2] in ("kev", "poc")]
+            pending = [p for p in pending if exploited(p[0]) or p[2] in ("kev", "poc")]
+        # Muted vendors stay quiet unless the CVE is exploited or gets a public exploit
+        quiet = [p for p in pending if not exploited(p[0]) and p[2] not in ("kev", "poc") and self.is_muted(p[0])]
+        if quiet:
+            log.info("Muted: %s", ", ".join(p[0]["id"] for p in quiet))
+            pending = [p for p in pending if p not in quiet]
         messages, groups = [], {}
         for p in pending:
             row, _, update = p
-            if row["kev"] or update:
+            if exploited(row) or update:
                 messages.append([p])
             else:
                 groups.setdefault(vendor_key(row), []).append(p)
@@ -604,7 +689,7 @@ class Engine:
     def send_cve(self, row, update=None):
         data = row["data"]
         ex = explain(data.get("vector"), data.get("cwe"))
-        emoji = "🚨" if row["kev"] else "🧨" if update == "poc" else ("🔴" if row["level"] == "critical" else "🟠")
+        emoji = "🚨" if exploited(row) else "🧨" if update == "poc" else ("🔴" if row["level"] == "critical" else "🟠")
         name = row["product"] or row["vendor"] or "vulnerability"
         score = f" · {row['score']:.1f}" if row["score"] is not None else ""
         prefix = UPDATE_PREFIX.get(update, "")
@@ -628,5 +713,5 @@ class Engine:
             ext = ("NVD", f"https://nvd.nist.gov/vuln/detail/{row['id']}")
         panel = util.panel_url(self.cfg, "cve/" + row["id"])
         actions = ([("Details", panel)] if panel else []) + [ext]
-        priority = 5 if row["kev"] else 4 if row["level"] == "critical" else 3
+        priority = 5 if exploited(row) else 4 if row["level"] == "critical" else 3
         self.notifier.send(title, "\n".join(lines), priority=priority, click=panel or ext[1], actions=actions)

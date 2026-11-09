@@ -33,6 +33,8 @@ def export_site(cfg, db, engine, notifier, out):
         _write(os.path.join(out, "api", "cve", f"{cid}.json"), app.cve(cid, mark_seen=False))
     _write(os.path.join(out, "api", "news.json"), app.news())
     _write(os.path.join(out, "api", "report.json"), app.report())
+    _write(os.path.join(out, "api", "outages.json"), app.outages())
+    _write(os.path.join(out, "api", "links.json"), app.links())
     _write(os.path.join(out, "api", "monitors.json"), app.monitors())
     _write(os.path.join(out, "api", "health.json"), app.health())
     return len(ids)

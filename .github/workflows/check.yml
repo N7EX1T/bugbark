@@ -71,8 +71,22 @@ jobs:
         with:
           path: site
 
+      # GitHub often can't see the just-uploaded artifact for a few seconds ("No artifacts named github-pages").
+      # Retry, and never fail the run over the dashboard: alerts were already sent, and a failed run e-mails you.
       - id: deploy
         uses: actions/deploy-pages@v5
+        continue-on-error: true
+
+      - if: steps.deploy.outcome == 'failure'
+        run: sleep 30
+
+      - id: deploy2
+        if: steps.deploy.outcome == 'failure'
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+
+      - if: steps.deploy2.outcome == 'failure'
+        run: echo "::warning::Dashboard not updated this run (GitHub Pages error); it will be on the next run."
 
       - name: Keep the schedule enabled
         env:
